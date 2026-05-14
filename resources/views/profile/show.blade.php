@@ -316,6 +316,49 @@
             user-select: text !important;
         }
 
+        /* Custom Pagination */
+        nav .d-sm-none { display: none !important; }
+        nav p.text-muted { display: none !important; }
+        nav .d-none.d-sm-flex { display: flex !important; justify-content: flex-end; width: 100%; }
+        
+        .pagination {
+            display: flex;
+            gap: 6px;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            align-items: center;
+        }
+        .pagination .page-item .page-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 14px;
+            min-width: 36px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            color: var(--text-main);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .pagination .page-item.active .page-link {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .pagination .page-item.disabled .page-link {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination .page-item:not(.disabled):not(.active) .page-link:hover {
+            border-color: var(--primary-dim);
+            color: var(--primary);
+            background: rgba(79, 70, 229, 0.1);
+        }
+
         /* Tier Frame Animations */
         .tier-frame-container {
             position: absolute;
@@ -677,7 +720,7 @@
                         
                         @if($transactions->hasPages())
                             <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                                {{ $transactions->links() }}
+                                {{ $transactions->links('pagination::bootstrap-5') }}
                             </div>
                         @endif
                     </div>
