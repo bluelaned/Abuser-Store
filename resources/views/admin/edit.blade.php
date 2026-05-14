@@ -7,7 +7,7 @@
 
 <style>
     .gallery-preview { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
-    .img-card { position: relative; width: 120px; height: 80px; border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; background: #f8fafc; }
+    .img-card { position: relative; width: 120px; height: 80px; border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden; background: rgba(0,0,0,0.2); }
     .img-card img { width: 100%; height: 100%; object-fit: cover; }
     .img-card input[type="checkbox"] { display: none; }
     .img-card label { position: absolute; inset: 0; background: rgba(239, 68, 68, 0); margin: 0; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
@@ -16,7 +16,13 @@
     .img-card label:hover span { display: block; }
     .img-card input[type="checkbox"]:checked + label { background: rgba(239, 68, 68, 0.9); }
     .img-card input[type="checkbox"]:checked + label span { display: block; content: "Dihapus"; font-size: 0.875rem; }
-    .ck-editor__editable { min-height: 250px; }
+    /* CKEditor Dark Theme */
+    .ck-editor__editable { min-height: 250px; color: var(--text-main) !important; background: rgba(0,0,0,0.2) !important; border-color: var(--border-color) !important; }
+    .ck.ck-editor__main>.ck-editor__editable { background: rgba(0,0,0,0.2) !important; border-color: var(--border-color) !important; }
+    .ck.ck-toolbar { background: var(--bg-card) !important; border-color: var(--border-color) !important; }
+    .ck.ck-button { color: var(--text-main) !important; }
+    .ck.ck-button:hover { background: rgba(255,255,255,0.1) !important; }
+    .ck-button__icon * { fill: var(--text-main) !important; }
 </style>
 
 <div class="header-actions" style="margin-bottom: 16px;">
@@ -49,7 +55,7 @@
             <input type="text" name="name" class="form-control" value="{{ $product->name }}" required>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; background: #f8fafc; border: 1px dashed var(--border-color); border-radius: 8px; margin-bottom: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; background: rgba(0,0,0,0.2); border: 1px dashed var(--border-color); border-radius: 8px; margin-bottom: 24px;">
             <div>
                 <label class="form-label" style="color: var(--primary);">1. Ganti Gambar Cover (Utama)</label>
                 <input type="file" name="image" class="form-control" accept="image/*" style="padding: 8px;">
@@ -98,7 +104,7 @@
             <textarea name="description" id="editor">{{ $product->description }}</textarea>
         </div>
 
-        <div style="background: #f8fafc; padding: 24px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 24px;">
+        <div style="background: rgba(0,0,0,0.2); padding: 24px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 24px;">
             <label class="form-label" style="color:var(--text-main); font-weight:600; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">💰 EDIT HARGA & DURASI (FIXED PRICE)</label>
             
             <div id="variant-container">
@@ -107,8 +113,12 @@
                         <input type="hidden" name="variant_ids[]" value="{{ $variant->id }}">
                         
                         <input type="text" name="durations[]" class="form-control" value="{{ $variant->duration }}" placeholder="Durasi" style="flex: 2; margin-bottom: 0;" required>
-                        <input type="number" name="prices[]" class="form-control" value="{{ $variant->price }}" placeholder="Harga IDR" style="flex: 2; margin-bottom: 0;" required>
-                        <input type="number" name="prices_usd[]" class="form-control" value="{{ $variant->price_usd }}" step="0.01" placeholder="USD ($)" style="flex: 1.5; margin-bottom: 0;" required>
+                        <input type="number" name="prices_amount[]" class="form-control" value="{{ $variant->price_amount ?? $variant->price_usd }}" step="0.0001" placeholder="Amount" style="flex: 2; margin-bottom: 0;" min="0" required>
+                        <select name="currencies[]" class="form-control" style="flex: 1.2; margin-bottom: 0; padding: 10px 8px;">
+                            @foreach(['USD' => 'USD ($)', 'IDR' => 'IDR (Rp)', 'EUR' => 'EUR (€)', 'GBP' => 'GBP (£)', 'MYR' => 'MYR (RM)', 'SGD' => 'SGD (S$)', 'THB' => 'THB (฿)', 'JPY' => 'JPY (¥)', 'AUD' => 'AUD (A$)'] as $code => $label)
+                                <option value="{{ $code }}" {{ ($variant->currency ?? 'USD') === $code ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
                         
                         @if($index == 0)
                             <div style="width: 40px;"></div> 
@@ -133,9 +143,19 @@
         const html = `
             <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: center;">
                 <input type="hidden" name="variant_ids[]" value="">
-                <input type="text" name="durations[]" class="form-control" placeholder="Durasi" style="flex: 2; margin-bottom: 0;" required>
-                <input type="number" name="prices[]" class="form-control" placeholder="Harga IDR" style="flex: 2; margin-bottom: 0;" required>
-                <input type="number" name="prices_usd[]" class="form-control" step="0.01" placeholder="USD ($)" style="flex: 1.5; margin-bottom: 0;" required>
+                <input type="text" name="durations[]" class="form-control" placeholder="Duration" style="flex: 2; margin-bottom: 0;" required>
+                <input type="number" name="prices_amount[]" class="form-control" step="0.0001" placeholder="Amount" style="flex: 2; margin-bottom: 0;" min="0" required>
+                <select name="currencies[]" class="form-control" style="flex: 1.2; margin-bottom: 0; padding: 10px 8px;">
+                    <option value="USD">USD ($)</option>
+                    <option value="IDR">IDR (Rp)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="MYR">MYR (RM)</option>
+                    <option value="SGD">SGD (S$)</option>
+                    <option value="THB">THB (฿)</option>
+                    <option value="JPY">JPY (¥)</option>
+                    <option value="AUD">AUD (A$)</option>
+                </select>
                 <button type="button" class="btn btn-danger" onclick="removeVariant(this)" style="padding: 8px 12px;">✕</button>
             </div>
         `;

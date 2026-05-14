@@ -276,7 +276,7 @@
     }
     .variant-table-header {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr 40px;
+        grid-template-columns: 1fr 1.6fr 0.8fr 40px;
         gap: 0;
         padding: 10px 16px;
         background: var(--border-color);
@@ -288,7 +288,7 @@
     }
     .variant-row {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr 40px;
+        grid-template-columns: 1fr 1.6fr 0.8fr 40px;
         gap: 12px;
         padding: 12px 16px;
         align-items: center;
@@ -328,10 +328,13 @@
     .add-variant-btn:hover { background: rgba(37,99,235,.06); }
 
     /* ── CKEditor fix ── */
-    .ck-editor__editable { min-height: 180px; color: #000 !important; background: #fff !important; }
-    .ck.ck-editor__main>.ck-editor__editable { background: #fff !important; }
-    .ck.ck-toolbar { border-radius: 8px 8px 0 0 !important; }
+    .ck-editor__editable { min-height: 180px; color: var(--text-main) !important; background: rgba(0,0,0,0.2) !important; border-color: var(--border-color) !important; }
+    .ck.ck-editor__main>.ck-editor__editable { background: rgba(0,0,0,0.2) !important; border-color: var(--border-color) !important; }
+    .ck.ck-toolbar { border-radius: 8px 8px 0 0 !important; background: var(--bg-card) !important; border-color: var(--border-color) !important; }
     .ck.ck-editor__editable { border-radius: 0 0 8px 8px !important; }
+    .ck.ck-button { color: var(--text-main) !important; }
+    .ck.ck-button:hover { background: rgba(255,255,255,0.1) !important; }
+    .ck-button__icon * { fill: var(--text-main) !important; }
 
     /* ── Modal Footer ── */
     .modal-footer {
@@ -466,16 +469,26 @@
 
                 <div class="variant-table-wrap">
                     <div class="variant-table-header">
-                        <span data-tr="duration_name">Duration / Package Name</span>
-                        <span data-tr="price_idr">Price IDR (Rp)</span>
-                        <span data-tr="price_usd">Price USD ($)</span>
+                        <span>Duration / Package Name</span>
+                        <span>Price (Amount)</span>
+                        <span>Currency</span>
                         <span></span>
                     </div>
                     <div id="variant-container">
                         <div class="variant-row">
-                            <input type="text" name="durations[]" class="form-control" placeholder="cth: 1 Bulan" required>
-                            <input type="number" name="prices[]" class="form-control" placeholder="cth: 150000" required>
-                            <input type="number" name="prices_usd[]" class="form-control" step="0.01" placeholder="cth: 9.99" required>
+                            <input type="text" name="durations[]" class="form-control" placeholder="e.g: 1 Month" required>
+                            <input type="number" name="prices_amount[]" class="form-control" step="0.0001" placeholder="e.g: 9.99" min="0" required>
+                            <select name="currencies[]" class="form-control" style="padding:10px 8px;">
+                                <option value="USD">USD ($)</option>
+                                <option value="IDR">IDR (Rp)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="GBP">GBP (£)</option>
+                                <option value="MYR">MYR (RM)</option>
+                                <option value="SGD">SGD (S$)</option>
+                                <option value="THB">THB (฿)</option>
+                                <option value="JPY">JPY (¥)</option>
+                                <option value="AUD">AUD (A$)</option>
+                            </select>
                             <div style="width:30px;"></div>
                         </div>
                     </div>
@@ -530,14 +543,27 @@
         if (editorInstance) {
             document.querySelector('[name="description"]').value = editorInstance.getData();
         }
-        document.querySelector('.modal-form').submit();
+        const form = document.querySelector('.modal-form');
+        if (form.reportValidity()) {
+            form.submit();
+        }
     }
 
     function addVariant() {
         const row = `<div class="variant-row">
             <input type="text" name="durations[]" class="form-control" placeholder="e.g: 3 Months" required>
-            <input type="number" name="prices[]" class="form-control" placeholder="e.g: 400000" required>
-            <input type="number" name="prices_usd[]" class="form-control" step="0.01" placeholder="e.g: 24.99" required>
+            <input type="number" name="prices_amount[]" class="form-control" step="0.0001" placeholder="e.g: 9.99" min="0" required>
+            <select name="currencies[]" class="form-control" style="padding:10px 8px;">
+                <option value="USD">USD ($)</option>
+                <option value="IDR">IDR (Rp)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="MYR">MYR (RM)</option>
+                <option value="SGD">SGD (S$)</option>
+                <option value="THB">THB (฿)</option>
+                <option value="JPY">JPY (¥)</option>
+                <option value="AUD">AUD (A$)</option>
+            </select>
             <button type="button" class="remove-variant-btn" onclick="this.closest('.variant-row').remove()">✕</button>
         </div>`;
         document.getElementById('variant-container').insertAdjacentHTML('beforeend', row);

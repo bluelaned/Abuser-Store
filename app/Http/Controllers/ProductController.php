@@ -31,11 +31,13 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'type' => 'required|in:internal,external',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'slider_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048', 
+            'slider_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             'durations' => 'required|array',
-            'prices' => 'required|array',
-            'prices_usd' => 'required|array',
-            // 👇 BARIS 'stocks' => 'required|array' DIHAPUS AJA 👇
+            'durations.*' => 'required|string',
+            'prices_amount' => 'required|array',
+            'prices_amount.*' => 'required|numeric|min:0',
+            'currencies' => 'required|array',
+            'currencies.*' => 'required|string|max:10',
         ]);
 
         if ($request->hasFile('image')) {
@@ -50,12 +52,19 @@ class ProductController extends Controller
         ]);
 
         foreach ($request->durations as $key => $duration) {
+            $amount   = (float) ($request->prices_amount[$key] ?? 0);
+            $currency = strtoupper($request->currencies[$key] ?? 'USD');
+            // Maintain legacy columns for backward compat
+            $priceUsd = $currency === 'USD' ? $amount : ($currency === 'IDR' ? $amount / 15500 : $amount);
+            $priceIdr = $currency === 'IDR' ? (int) $amount : (int) round($amount * 15500);
+
             Variant::create([
-                'product_id' => $product->id,
-                'duration'   => $duration,
-                'price'      => $request->prices[$key],
-                'price_usd'  => $request->prices_usd[$key],
-                // 👇 BARIS 'stock' => ... DIHAPUS JUGA 👇
+                'product_id'   => $product->id,
+                'duration'     => $duration,
+                'price'        => $priceIdr,
+                'price_usd'    => $priceUsd,
+                'price_amount' => $amount,
+                'currency'     => $currency,
             ]);
         }
 
@@ -83,13 +92,14 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:internal,external',
-            // image nullable biar gak wajib upload ulang
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', 
-            // [BARU] Validasi buat gambar slider yang baru diupload
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'slider_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'durations' => 'required|array',
-            'prices' => 'required|array',
-            'prices_usd' => 'required|array',
+            'durations.*' => 'required|string',
+            'prices_amount' => 'required|array',
+            'prices_amount.*' => 'required|numeric|min:0',
+            'currencies' => 'required|array',
+            'currencies.*' => 'required|string|max:10',
         ]);
 
         $product = Product::findOrFail($id);
@@ -111,12 +121,17 @@ class ProductController extends Controller
             $product->variants()->whereNotIn('id', $ids_to_keep)->delete();
 
             foreach ($request->durations as $index => $duration) {
-                // KITA GAK UPDATE KOLOM 'stock' DI SINI
-                // BIARKAN ITU DIHITUNG DARI TABLE VOUCHERS
+                $amount   = (float) ($request->prices_amount[$index] ?? 0);
+                $currency = strtoupper($request->currencies[$index] ?? 'USD');
+                $priceUsd = $currency === 'USD' ? $amount : ($currency === 'IDR' ? $amount / 15500 : $amount);
+                $priceIdr = $currency === 'IDR' ? (int) $amount : (int) round($amount * 15500);
+
                 $variantData = [
-                    'duration'  => $duration,
-                    'price'     => $request->prices[$index] ?? 0,
-                    'price_usd' => $request->prices_usd[$index] ?? 0,
+                    'duration'     => $duration,
+                    'price'        => $priceIdr,
+                    'price_usd'    => $priceUsd,
+                    'price_amount' => $amount,
+                    'currency'     => $currency,
                 ];
 
                 $variantId = $request->variant_ids[$index] ?? null;

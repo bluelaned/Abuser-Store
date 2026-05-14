@@ -15,9 +15,11 @@ class Variant extends Model
         'product_id',
         'duration',
         'price',
-        'price_usd', // WAJIB TAMBAHKAN INI
-        'stock' ,
-    ];  
+        'price_usd',
+        'price_amount',
+        'currency',
+        'stock',
+    ];
 
     public function product()
     {
