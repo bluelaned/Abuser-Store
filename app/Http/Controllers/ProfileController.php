@@ -27,12 +27,11 @@ class ProfileController extends Controller
         }
 
         $availableTiers = [
-            ['id' => 'bronze', 'name' => 'Bronze', 'color' => '#cd7f32', 'threshold' => 0],
-            ['id' => 'silver', 'name' => 'Silver', 'color' => '#cbd5e1', 'threshold' => 50],
-            ['id' => 'gold', 'name' => 'Gold', 'color' => '#f59e0b', 'threshold' => 200],
-            ['id' => 'platinum', 'name' => 'Platinum', 'color' => '#d1d5db', 'threshold' => 1000],
-            ['id' => 'diamond', 'name' => 'Diamond', 'color' => '#05d9e8', 'threshold' => 2500],
-            ['id' => 'crown', 'name' => 'Crown', 'color' => '#ff2a6d', 'threshold' => 5000],
+            ['id' => 'bronze',   'name' => 'Bronze',   'color' => '#cd7f32', 'threshold' => 0],
+            ['id' => 'silver',   'name' => 'Silver',   'color' => '#cbd5e1', 'threshold' => 100],
+            ['id' => 'gold',     'name' => 'Gold',     'color' => '#f59e0b', 'threshold' => 500],
+            ['id' => 'platinum', 'name' => 'Platinum', 'color' => '#a78bfa', 'threshold' => 1000],
+            ['id' => 'diamond',  'name' => 'Diamond',  'color' => '#60a5fa', 'threshold' => 5000],
         ];
 
         $unlockedFrames = [];
@@ -40,7 +39,7 @@ class ProfileController extends Controller
 
         foreach($availableTiers as $t) {
             if ($usdSpent >= $t['threshold']) {
-                $t['icon'] = asset('images/tiers/' . $t['id'] . '_badge.png');
+                $t['icon'] = asset('images/tiers/icon_' . $t['id'] . '.png');
                 $unlockedFrames[] = $t;
                 $tier = $t;
             }
@@ -48,7 +47,7 @@ class ProfileController extends Controller
 
         if (!$tier) {
             $tier = $availableTiers[0];
-            $tier['icon'] = asset('images/tiers/bronze_badge.png');
+            $tier['icon'] = asset('images/tiers/icon_bronze.png');
             $unlockedFrames[] = $tier;
         }
 

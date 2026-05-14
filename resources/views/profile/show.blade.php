@@ -359,96 +359,24 @@
             background: rgba(79, 70, 229, 0.1);
         }
 
-        /* Tier Frame Animations */
+        @keyframes tierBadgeBob {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50%       { transform: translateY(-4px) scale(1.06); }
+        }
+
+        /* ═══════════════════════════════════════════════
+           TIER FRAME SYSTEM — Premium Animated Frames
+        ═══════════════════════════════════════════════ */
+
         .tier-frame-container {
             position: absolute;
-            inset: -6px;
+            inset: -8px;
             border-radius: 50%;
             z-index: 2;
             pointer-events: none;
         }
 
-        .tier-frame-bronze {
-            border: 4px solid #cd7f32;
-            box-shadow: 0 0 10px rgba(205,127,50,0.4), inset 0 0 10px rgba(205,127,50,0.4);
-            background: linear-gradient(135deg, rgba(205,127,50,0.1) 0%, transparent 100%);
-        }
 
-        .tier-frame-silver {
-            border: 4px solid #cbd5e1;
-            box-shadow: 0 0 12px rgba(203,213,225,0.5), inset 0 0 12px rgba(203,213,225,0.4);
-            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
-        }
-
-        .tier-frame-gold {
-            border: 4px solid #f59e0b;
-            box-shadow: 0 0 15px rgba(245,158,11,0.6), inset 0 0 15px rgba(245,158,11,0.5);
-            background: linear-gradient(135deg, rgba(245,158,11,0.15) 0%, transparent 100%);
-        }
-
-        @keyframes platinumPulse {
-            0%, 100% { box-shadow: 0 0 15px rgba(209,213,219,0.5), inset 0 0 15px rgba(209,213,219,0.4); border-color: #d1d5db; }
-            50% { box-shadow: 0 0 25px rgba(255,255,255,0.8), inset 0 0 20px rgba(255,255,255,0.6); border-color: #ffffff; }
-        }
-        .tier-frame-platinum {
-            border: 4px solid #d1d5db;
-            animation: platinumPulse 3s infinite ease-in-out;
-            background: linear-gradient(135deg, rgba(209,213,219,0.2) 0%, transparent 100%);
-        }
-
-        @keyframes diamondGlow {
-            0%, 100% { box-shadow: 0 0 20px #05d9e8, inset 0 0 20px #05d9e8; }
-            50% { box-shadow: 0 0 40px #01ffff, inset 0 0 30px #01ffff; }
-        }
-        @keyframes spinDiamond {
-            100% { transform: rotate(360deg); }
-        }
-        .tier-frame-diamond {
-            border: 4px solid #05d9e8;
-            animation: diamondGlow 2s infinite alternate;
-        }
-        .tier-frame-diamond::after {
-            content: '';
-            position: absolute;
-            inset: -4px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.8) 10%, transparent 20%, transparent 50%, rgba(255,255,255,0.8) 60%, transparent 70%);
-            animation: spinDiamond 4s infinite linear;
-            mix-blend-mode: screen;
-        }
-
-        @keyframes crownAura {
-            0%, 100% { box-shadow: 0 0 30px rgba(255,42,109,0.6), 0 0 10px rgba(255,215,0,0.5), inset 0 0 20px rgba(255,42,109,0.5); }
-            50% { box-shadow: 0 0 50px rgba(255,42,109,0.9), 0 0 20px rgba(255,215,0,0.8), inset 0 0 30px rgba(255,42,109,0.8); }
-        }
-        @keyframes spinCrownFast {
-            100% { transform: rotate(-360deg); }
-        }
-        @keyframes spinCrownSlow {
-            100% { transform: rotate(360deg); }
-        }
-        .tier-frame-crown {
-            border: 4px solid #ff2a6d;
-            animation: crownAura 3s infinite ease-in-out;
-        }
-        .tier-frame-crown::before {
-            content: '';
-            position: absolute;
-            inset: -8px;
-            border-radius: 50%;
-            border: 2px dashed #ffd700;
-            animation: spinCrownFast 10s infinite linear;
-            opacity: 0.7;
-        }
-        .tier-frame-crown::after {
-            content: '';
-            position: absolute;
-            inset: -2px;
-            border-radius: 50%;
-            background: conic-gradient(from 0deg, rgba(255,215,0,0) 0%, rgba(255,215,0,0.5) 25%, rgba(255,215,0,0) 50%, rgba(255,215,0,0.5) 75%, rgba(255,215,0,0) 100%);
-            animation: spinCrownSlow 6s infinite linear;
-            mix-blend-mode: color-dodge;
-        }
     </style>
 </head>
 <body>
@@ -587,7 +515,9 @@
             <div class="avatar-container" style="position: relative; width: 120px; height: 120px; margin-right: 32px; cursor: {{ (auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin')) ? 'pointer' : 'default' }};" @if(auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin')) onclick="openAvatarModal()" @endif>
                 @if($equippedFrame)
                 <!-- Selected Circular Frame -->
-                <div class="tier-frame-container tier-frame-{{ $equippedFrame['id'] }}"></div>
+                <div class="tier-frame-container">
+                    <img src="{{ asset('images/tiers/frame_' . $equippedFrame['id'] . '.png') }}" alt="{{ $equippedFrame['name'] }} Frame" style="width: 100%; height: 100%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.35); pointer-events: none; z-index: 10; object-fit: contain;">
+                </div>
                 @endif
                 <!-- Circular Avatar -->
                 <img src="{{ $user->avatar ?? 'https://ui-avatars.com/api/?name='.$user->name.'&background=random' }}" alt="Avatar" class="profile-avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; position: relative; z-index: 1; border: 4px solid var(--bg-card); background: var(--bg-surface);">
@@ -601,8 +531,13 @@
             </div>
             
             <div class="profile-info">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <h1 class="profile-name" style="margin: 0;">{{ $user->name }}</h1>
+                <div style="display: flex; align-items: center; gap: 12px; position: relative; width: fit-content;">
+                    <h1 class="profile-name" style="margin: 0; {{ $tier['id'] === 'diamond' ? 'color: #60a5fa; text-shadow: 0 0 15px rgba(96,165,250,0.5);' : '' }}">
+                        {{ $user->name }}
+                    </h1>
+                    @if($tier['id'] === 'diamond')
+                    <div style="position: absolute; inset: 0; background: url('{{ asset('images/diamond_name.gif') }}') center / cover; pointer-events: none; z-index: 10; mix-blend-mode: screen;"></div>
+                    @endif
                 </div>
                 <p class="profile-role">{{ ucfirst($user->role) }}</p>
                 <div class="profile-meta">
@@ -640,7 +575,7 @@
                 <div class="stat-label">Membership</div>
                 <div class="stat-value" style="color: {{ $tier['color'] }}; text-shadow: 0 0 15px {{ $tier['color'] }}60; display: flex; align-items: center; gap: 8px;">
                     {{ $tier['name'] }}
-                    <img src="{{ $tier['icon'] }}" alt="Tier" style="height: 24px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); mix-blend-mode: screen;">
+                    <img src="{{ $tier['icon'] }}" alt="Tier" style="height: 24px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
                 </div>
             </div>
         </div>
@@ -810,9 +745,106 @@
                 @endif
 
             </div>
+
+            {{-- ─── MEMBERSHIP TIERS SHOWCASE ─── --}}
+            <div style="width: 100%; margin-top: 32px; border-top: 1px solid var(--border-color); padding-top: 28px;">
+                <p style="color: var(--text-muted); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 6px; text-align:center;">◆ MEMBERSHIP TIERS ◆</p>
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin: 0 0 24px; text-align:center; opacity:0.7;">The more you spend, the higher your membership tier.</p>
+
+                @php
+                    $allTiers  = [
+                        ['id'=>'bronze',   'name'=>'Bronze',   'color'=>'#cd7f32', 'threshold'=>0,    'label'=>'$0+'],
+                        ['id'=>'silver',   'name'=>'Silver',   'color'=>'#cbd5e1', 'threshold'=>100,  'label'=>'$100+'],
+                        ['id'=>'gold',     'name'=>'Gold',     'color'=>'#f59e0b', 'threshold'=>500,  'label'=>'$500+'],
+                        ['id'=>'platinum', 'name'=>'Platinum', 'color'=>'#a78bfa', 'threshold'=>1000, 'label'=>'$1,000+'],
+                        ['id'=>'diamond',  'name'=>'Diamond',  'color'=>'#60a5fa', 'threshold'=>5000, 'label'=>'$5,000+'],
+                    ];
+                    $tierDescriptions = [
+                        'bronze'   => ['Solid foundation.', 'Your journey begins.'],
+                        'silver'   => ['Building momentum.', 'Keep going.'],
+                        'gold'     => ['Rising above.', "You're doing great."],
+                        'platinum' => ['Elite status achieved.', "You're almost unstoppable."],
+                        'diamond'  => ['The pinnacle of excellence.', "You're in a league of your own."],
+                    ];
+                    // Find next tier
+                    $nextTier = null;
+                    $prevThreshold = 0;
+                    foreach($allTiers as $idx => $t) {
+                        if($usdSpent < $t['threshold']) { $nextTier = $t; $prevThreshold = $allTiers[$idx-1]['threshold'] ?? 0; break; }
+                    }
+                @endphp
+
+                {{-- Tier Cards --}}
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 28px;">
+                    @foreach($allTiers as $t)
+                    @php
+                        $isActive  = $tier['id'] === $t['id'];
+                        $isUnlocked = $usdSpent >= $t['threshold'];
+                        $desc = $tierDescriptions[$t['id']];
+                        $animated = in_array($t['id'], ['platinum','diamond']);
+                    @endphp
+                    <div style="
+                        flex: 1; min-width: 100px; max-width: 140px;
+                        background: {{ $isActive ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)' }};
+                        border: 1.5px solid {{ $isActive ? $t['color'] : 'rgba(255,255,255,0.08)' }};
+                        border-radius: 14px; padding: 18px 12px 14px;
+                        text-align: center; position: relative;
+                        box-shadow: {{ $isActive ? '0 0 20px '.$t['color'].'40, inset 0 0 12px '.$t['color'].'10' : 'none' }};
+                        transition: all 0.3s;
+                        opacity: {{ $isUnlocked ? '1' : '0.45' }};
+                    ">
+                        @if($isActive)
+                        <div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); background: {{ $t['color'] }}; color: #000; font-size:0.6rem; font-weight:800; padding: 2px 10px; border-radius:20px; white-space:nowrap; letter-spacing:0.5px;">YOU ARE HERE</div>
+                        @endif
+                        @if($animated)
+                        <div style="font-size:0.55rem; background: rgba(255,255,255,0.12); color:{{ $t['color'] }}; padding:1px 7px; border-radius:10px; display:inline-block; margin-bottom:6px; font-weight:700; letter-spacing:0.5px;">ANIMATED</div>
+                        @endif
+                        {{-- Tier badge image --}}
+                        <div style="height: 56px; display:flex; align-items:center; justify-content:center; margin-bottom: 8px;">
+                            <img src="{{ asset('images/tiers/icon_'.$t['id'].'.png') }}" alt="{{ $t['name'] }}"
+                                 style="height: 52px; object-fit: contain;
+                                        filter: {{ $isUnlocked ? 'drop-shadow(0 0 8px '.$t['color'].'80)' : 'grayscale(1) brightness(0.5)' }};
+                                        {{ $isActive ? 'animation: tierBadgeBob 2s ease-in-out infinite;' : '' }}">
+                        </div>
+                        <div style="font-weight: 800; font-size: 0.8rem; color: {{ $isUnlocked ? $t['color'] : '#555' }}; letter-spacing: 1px; margin-bottom: 6px;">{{ strtoupper($t['name']) }}</div>
+                        <div style="font-size: 0.75rem; background: rgba(0,0,0,0.25); color: {{ $isUnlocked ? 'rgba(255,255,255,0.7)' : '#444' }}; border: 1px solid {{ $isUnlocked ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)' }}; border-radius: 8px; padding: 3px 0; margin-bottom: 10px;">{{ $t['label'] }}</div>
+                        <div style="font-size:0.7rem; color: {{ $isUnlocked ? 'rgba(255,255,255,0.55)' : '#444' }}; line-height:1.5;">{{ $desc[0] }}<br>{{ $desc[1] }}</div>
+                    </div>
+                    @endforeach
+                </div>
+
+                {{-- Progress bar toward next tier --}}
+                @if($nextTier)
+                @php
+                    $range    = $nextTier['threshold'] - $prevThreshold;
+                    $progress = min(100, max(0, (($usdSpent - $prevThreshold) / $range) * 100));
+                @endphp
+                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                        <span style="font-size:0.8rem; color: var(--text-muted);">Progress to <strong style="color:{{ $nextTier['color'] }};">{{ $nextTier['name'] }}</strong></span>
+                        <span style="font-size:0.8rem; color: var(--text-muted);">
+                            ${{ number_format($usdSpent, 0) }} / ${{ number_format($nextTier['threshold'], 0) }}
+                        </span>
+                    </div>
+                    <div style="height: 8px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden;">
+                        <div style="height: 100%; width: {{ $progress }}%; background: linear-gradient(90deg, {{ $tier['color'] }}, {{ $nextTier['color'] }}); border-radius: 99px; transition: width 1s ease; box-shadow: 0 0 8px {{ $nextTier['color'] }}80;"></div>
+                    </div>
+                    <p style="font-size:0.72rem; color: var(--text-muted); margin: 8px 0 0; text-align:right;">
+                        ${{ number_format(max(0, $nextTier['threshold'] - $usdSpent), 0) }} more to reach {{ $nextTier['name'] }}
+                    </p>
+                </div>
+                @else
+                <div style="text-align:center; padding: 12px; background: rgba(96,165,250,0.07); border: 1px solid rgba(96,165,250,0.25); border-radius: 12px;">
+                    <span style="font-size: 0.9rem; color: #60a5fa; font-weight: 700;">💎 Maximum tier achieved — Diamond Elite</span>
+                </div>
+                @endif
+            </div>
+            {{-- ─── END MEMBERSHIP TIERS ─── --}}
+
         </div>
     </div>
 </div>
+
 
 <!-- Upload Banner Modal -->
 @if(auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin'))
@@ -866,8 +898,8 @@
                     @foreach($unlockedFrames as $f)
                     <div class="frame-option" data-id="{{ $f['id'] }}" style="border: 2px solid var(--border-color); border-radius: 8px; padding: 16px 12px; text-align: center; cursor: pointer; transition: 0.2s;">
                         <div style="width: 48px; height: 48px; position: relative; margin: 0 auto 12px;">
-                            <div class="tier-frame-container tier-frame-{{ $f['id'] }}" style="inset: 0;"></div>
-                            <div style="width: 100%; height: 100%; border-radius: 50%; background: #2a2a2d;"></div>
+                            <img src="{{ asset('images/tiers/frame_' . $f['id'] . '.png') }}" alt="{{ $f['name'] }} Frame" style="width: 100%; height: 100%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(1.55); pointer-events: none; z-index: 10; object-fit: contain;">
+                            <div style="width: 100%; height: 100%; border-radius: 50%; background: #2a2a2d; position: relative; z-index: 1;"></div>
                         </div>
                         <span style="font-size: 0.8rem; font-weight: 600; color: {{ $f['color'] }}">{{ $f['name'] }}</span>
                     </div>
@@ -1032,6 +1064,8 @@
                 currentAvatarSrc = document.querySelector('.profile-avatar').src;
                 croppieInstance.bind({
                     url: currentAvatarSrc
+                }).then(() => {
+                    croppieInstance.setZoom(0);
                 });
             }, 100);
             updateFrameSelectionUI();
@@ -1075,7 +1109,9 @@
                 let reader = new FileReader();
                 reader.onload = function(ev) {
                     currentAvatarSrc = ev.target.result;
-                    croppieInstance.bind({ url: currentAvatarSrc });
+                    croppieInstance.bind({ url: currentAvatarSrc }).then(() => {
+                        croppieInstance.setZoom(0);
+                    });
                 }
                 reader.readAsDataURL(e.target.files[0]);
             }

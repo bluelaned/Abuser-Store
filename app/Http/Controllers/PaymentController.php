@@ -25,95 +25,81 @@ class PaymentController extends Controller
             return back()->with('error', 'Produk tidak ditemukan.');
         }
 
-        $method   = $request->payment_method; 
-        $currency = 'USD';
+        $method   = $request->payment_method;
         $email    = auth()->user()->email;
         $quantity = (int) $request->quantity;
         if ($quantity < 1) $quantity = 1;
 
-        // 2. Harga Satuan (USD)
-        $originalUnitPriceUSD = (float) $variant->price_usd;
-        $originalTotalUSD = $originalUnitPriceUSD * $quantity;
-        
-        $discountUSD  = 0;
-        $promoCode = null;
+        // Use variant's own currency and price_amount
+        $variantCurrency      = strtoupper($variant->currency ?? 'USD');
+        $originalUnitAmount   = (float) ($variant->price_amount ?? $variant->price_usd ?? 0);
+        $originalTotalAmount  = $originalUnitAmount * $quantity;
+
+        // For backward-compat with Stripe (which needs USD-equivalent for display)
+        $originalUnitPriceUSD = $variantCurrency === 'USD' ? $originalUnitAmount
+            : ($variantCurrency === 'IDR' ? $originalUnitAmount / 15500 : $originalUnitAmount);
+        $originalTotalUSD     = $originalUnitPriceUSD * $quantity;
+
+        $discountNative = 0;
+        $discountUSD    = 0;
+        $promoCode  = null;
         $promoModel = null;
-        
+
         if ($request->promo_code) {
             $promoModel = Promo::where('code', $request->promo_code)->first();
             if ($promoModel) {
-                // Check if active and valid
-                $isActive = ($promoModel->is_active == 1 || is_null($promoModel->is_active));
+                $isActive    = ($promoModel->is_active == 1 || is_null($promoModel->is_active));
                 $isValidDate = true;
                 if (!is_null($promoModel->valid_until)) {
                     $expiredDate = \Carbon\Carbon::parse($promoModel->valid_until)->endOfDay();
                     if ($expiredDate->isPast() && !$expiredDate->isToday()) $isValidDate = false;
                 }
-
                 if (!$isActive || !$isValidDate) {
                     return back()->with('error', 'Kode promo tidak aktif atau kedaluwarsa.');
                 }
-
-                // Min Qty Check
                 if ($quantity < $promoModel->min_qty) {
                     return back()->with('error', 'Minimal pembelian ' . $promoModel->min_qty . ' produk untuk menggunakan promo ini.');
                 }
-
-                // Specific Product Check
                 if ($promoModel->product_id && $promoModel->product_id != $variant->product_id) {
                     return back()->with('error', 'Promo ini tidak berlaku untuk produk ini.');
                 }
-
-                // Promo Limit per user check
                 if ($promoModel->usage_limit_per_user > 0) {
                     $usedCount = Transaction::where('user_id', auth()->id())
                         ->where('promo_code', $promoModel->code)
-                        ->whereIn('status', ['PAID', 'UNPAID'])
-                        ->count();
-
+                        ->whereIn('status', ['PAID', 'UNPAID'])->count();
                     if ($usedCount >= $promoModel->usage_limit_per_user) {
                         return back()->with('error', 'Anda sudah mencapai batas penggunaan promo ini.');
                     }
                 }
 
                 $promoCode = $promoModel->code;
+                // Discount always stored in IDR, convert to native currency
+                $rate = 15500;
                 if ($promoModel->type == 'percent') {
-                    $discountUSD = $originalTotalUSD * ($promoModel->value / 100);
+                    $discountNative = $originalTotalAmount * ($promoModel->value / 100);
                     if ($promoModel->max_discount > 0) {
-                        $maxDiscountUSD = $promoModel->max_discount / 15500;
-                        if ($discountUSD > $maxDiscountUSD) {
-                            $discountUSD = $maxDiscountUSD;
-                        }
+                        $maxNative = $variantCurrency === 'IDR' ? $promoModel->max_discount : $promoModel->max_discount / $rate;
+                        if ($discountNative > $maxNative) $discountNative = $maxNative;
                     }
                 } else {
-                    $rate = 15500;
-                    $discountUSD = $promoModel->value / $rate;
+                    $discountNative = $variantCurrency === 'IDR' ? $promoModel->value : $promoModel->value / $rate;
                 }
+                $discountUSD = $variantCurrency === 'IDR' ? $discountNative / $rate : $discountNative;
             }
         }
 
-        $finalTotalUSD = max(0.01, $originalTotalUSD - $discountUSD);
+        $finalTotalNative = max(0.01, $originalTotalAmount - $discountNative);
+        $finalTotalUSD    = max(0.01, $originalTotalUSD - $discountUSD);
 
-        // 4. Proses Pembayaran
+        // 4. Route to payment gateway
         if (strtolower($method) === 'stripe') {
-            return $this->processStripe($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $currency, $email, $promoCode, $request->promo_code);
+            return $this->processStripe($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $variantCurrency, $email, $promoCode, $request->promo_code);
         }
 
-        // Midtrans → IDR
+        // Midtrans → always IDR
         $rate = 15500;
-        $originalUnitPriceIDR = (int) round($originalUnitPriceUSD * $rate);
-        $discountIDR = 0;
-        
-        if ($promoModel) {
-            if ($promoModel->type == 'percent') {
-                $discountIDR = (int) round(($originalUnitPriceIDR * $quantity) * ($promoModel->value / 100));
-                if ($promoModel->max_discount > 0 && $discountIDR > $promoModel->max_discount) {
-                    $discountIDR = (int) $promoModel->max_discount;
-                }
-            } else {
-                $discountIDR = (int) $promoModel->value;
-            }
-        }
+        $originalUnitPriceIDR = $variantCurrency === 'IDR' ? (int) $originalUnitAmount : (int) round($originalUnitPriceUSD * $rate);
+        $discountIDR = $variantCurrency === 'IDR' ? (int) $discountNative : (int) round($discountUSD * $rate);
 
         return $this->processMidtrans($variant, $originalUnitPriceIDR, $discountIDR, $quantity, $email, $promoCode);
     }

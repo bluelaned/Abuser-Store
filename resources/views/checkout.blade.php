@@ -159,11 +159,13 @@
         $first_stock = $first ? $first->vouchers->where('status', 'AVAILABLE')->count() : 0;
 
         if(!$first) {
-            $first = (object)['id' => 0, 'price' => 0, 'price_usd' => 0, 'price_eur' => 0, 'duration' => 'Data Rusak'];
+            $first = (object)['id' => 0, 'price' => 0, 'price_usd' => 0, 'price_amount' => 0, 'currency' => 'USD', 'duration' => 'Data Rusak'];
             $first_stock = 0;
         }
 
-        // [BARU] Hitung total gambar yang ada (1 Cover + Sisa slide dari DB)
+        $currencySymbols = ['USD'=>'$','IDR'=>'Rp ','EUR'=>'€','GBP'=>'£','MYR'=>'RM ','SGD'=>'S$','THB'=>'฿','JPY'=>'¥','AUD'=>'A$'];
+
+        // Hitung total gambar yang ada (1 Cover + Sisa slide dari DB)
         $totalSlides = 1 + $product->images->count();
     @endphp
 
@@ -259,7 +261,15 @@
             <div style="display:flex; justify-content: space-between; align-items: flex-start;">
                 <div>
                     <h1 class="product-title">{{ $product->name }}</h1>
-                    <div class="product-price" id="mainPriceDisplay">$ {{ number_format($first->price_usd ?? 0, 2) }}</div>
+                    <div class="product-price" id="mainPriceDisplay">
+                        @php
+                            $a   = $first->price_amount ?? $first->price_usd ?? 0;
+                            $c   = $first->currency ?? 'USD';
+                            $sym = $currencySymbols[$c] ?? ($c.' ');
+                            $dec = in_array($c, ['IDR','JPY']) ? 0 : 2;
+                        @endphp
+                        {{ $sym . number_format($a, $dec) }}
+                    </div>
                     
                     <div class="stock-badge">
                         <span class="lang-stock">Stok</span>: <span id="stockDisplay">{{ $first_stock }}</span> <span id="unitDisplay" class="lang-unit">@if($first_stock == 1) Unit @else Units @endif</span>
@@ -275,20 +285,29 @@
                         $isOutOfStock = $stok <= 0; 
                     @endphp
                     
-                    <div class="variant-item {{ ($first->id == $v->id) ? 'active' : '' }} {{ $isOutOfStock ? 'disabled' : '' }}" 
-                         onclick="{{ $isOutOfStock ? '' : "selectVariant(this, '$v->id', '$v->price_usd', '$stok')" }}">
+                    <div class="variant-item {{ ($first->id == $v->id) ? 'active' : '' }} {{ $isOutOfStock ? 'disabled' : '' }}"
+                         onclick="{{ $isOutOfStock ? '' : "selectVariant(this, '{$v->id}', '" . ($v->price_amount ?? $v->price_usd) . "', '{$stok}', '" . ($v->currency ?? 'USD') . "')" }}">
                         <div>
                             <div style="font-weight:700; font-size:1rem; color:var(--text-main);" class="lang-duration" data-val="{{ $v->duration }}">{{ $v->duration }}</div>
                             <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
                                 <span class="lang-stock">Stok</span>: <span class="stock-num">{{ $stok }}</span> <span class="lang-unit">Unit</span>
                             </div>
                         </div>
-                        
-                        <span class="v-price-text lang-habis-or-price" 
+
+                        @php
+                            $vAmount = $v->price_amount ?? $v->price_usd ?? 0;
+                            $vCur    = $v->currency ?? 'USD';
+                            $vSym    = $currencySymbols[$vCur] ?? ($vCur.' ');
+                            $vDec    = in_array($vCur, ['IDR','JPY']) ? 0 : 2;
+                        @endphp
+                        <span class="v-price-text lang-habis-or-price"
                               data-stock="{{ $stok }}"
-                              data-price-usd="{{ $v->price_usd ?? 0 }}" 
+                              data-price-amount="{{ $vAmount }}"
+                              data-currency="{{ $vCur }}"
+                              data-price-sym="{{ $vSym }}"
+                              data-price-dec="{{ $vDec }}"
                               style="font-weight:800; color: {{ $isOutOfStock ? 'var(--danger)' : 'var(--primary)' }};">
-                            {{ $isOutOfStock ? 'HABIS' : '$ ' . number_format($v->price_usd ?? 0, 2) }}
+                            {{ $isOutOfStock ? 'HABIS' : $vSym . number_format($vAmount, $vDec) }}
                         </span>
                     </div>
                 @endforeach
@@ -427,7 +446,10 @@
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         // GLOBAL STATE
-        let activePriceUSD = {{ $first->price_usd ?? 0 }};
+        let activePrice   = {{ $first->price_amount ?? $first->price_usd ?? 0 }};
+        let activeCurrency = '{{ $first->currency ?? "USD" }}';
+        let activeSym     = '{{ ["USD"=>"$","IDR"=>"Rp ","EUR"=>"€","GBP"=>"£","MYR"=>"RM ","SGD"=>"S$","THB"=>"฿","JPY"=>"¥","AUD"=>"A$"][$first->currency ?? "USD"] ?? "$ " }}';
+        let activeDec     = {{ in_array($first->currency ?? 'USD', ['IDR','JPY']) ? 0 : 2 }};
         let quantity = 1;
         let currentStock = {{ $first_stock ?? 0 }};
         let activePromo = { type: null, value: 0, max_discount: 0 };
@@ -538,16 +560,22 @@
             }, 600);
         });
 
-        function selectVariant(el, id, usd, stock) {
+        function selectVariant(el, id, amount, stock, currency) {
             document.querySelectorAll('.variant-item').forEach(v => v.classList.remove('active'));
             el.classList.add('active');
             document.getElementById('variantInput').value = id;
-            activePriceUSD = parseFloat(usd) || 0;
-            currentStock = parseInt(stock) || 0;
+            // Find sym/dec from data attributes on the price span
+            const priceSpan = el.querySelector('.v-price-text');
+            activeSym      = priceSpan ? priceSpan.dataset.priceSym : '$';
+            activeDec      = priceSpan ? parseInt(priceSpan.dataset.priceDec) : 2;
+            activePrice    = parseFloat(amount) || 0;
+            activeCurrency = currency || 'USD';
+            currentStock   = parseInt(stock) || 0;
             document.getElementById('stockDisplay').innerText = currentStock;
             quantity = 1;
             document.getElementById('qtyDisplay').innerText = 1;
             document.getElementById('quantityInput').value = 1;
+            document.getElementById('currencyInput').value = currency;
             const btn = document.getElementById('btnPay');
             btn.disabled = (currentStock <= 0);
             updatePayButton();
@@ -566,21 +594,22 @@
         }
 
         function calculateTotal() {
-            let base = activePriceUSD;
+            let base     = activePrice;
             let subtotal = base * quantity;
-            let disc = 0;
+            let disc     = 0;
             if (activePromo.type === 'percent') {
                 disc = subtotal * (activePromo.value / 100);
                 if (activePromo.max_discount > 0) {
-                    let maxDiscUsd = activePromo.max_discount / 15500;
-                    if (disc > maxDiscUsd) disc = maxDiscUsd;
+                    // max_discount stored in IDR; convert if needed
+                    let maxDiscNative = activeCurrency === 'IDR' ? activePromo.max_discount : activePromo.max_discount / 15500;
+                    if (disc > maxDiscNative) disc = maxDiscNative;
                 }
             } else if (activePromo.type === 'fixed') {
-                const rate = 15500;
-                disc = activePromo.value / rate;
+                // fixed discount stored in IDR
+                disc = activeCurrency === 'IDR' ? activePromo.value : activePromo.value / 15500;
             }
             let final = Math.max(0, subtotal - disc);
-            document.getElementById('mainPriceDisplay').innerText = '$ ' + final.toFixed(2);
+            document.getElementById('mainPriceDisplay').innerText = activeSym + final.toFixed(activeDec);
         }
 
         async function checkCoupon() {
