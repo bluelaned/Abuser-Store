@@ -1,0 +1,220 @@
+/* ============================================================
+   ABUSER STORE — GLOBAL ANIMATION LIBRARY
+   ============================================================ */
+
+/* --- PAGE LOADING SCREEN --- */
+#page-loader {
+    position: fixed;
+    inset: 0;
+    background: #0f1015;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+#page-loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+.loader-brand {
+    font-family: 'Inter', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -1px;
+    animation: loader-pulse 1.5s ease-in-out infinite;
+}
+.loader-brand span { color: #3b82f6; }
+.loader-bar-wrap {
+    width: 200px;
+    height: 3px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 99px;
+    overflow: hidden;
+}
+.loader-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #818cf8);
+    border-radius: 99px;
+    animation: loader-fill 1.4s ease-in-out forwards;
+}
+@keyframes loader-fill {
+    0%   { width: 0%; }
+    40%  { width: 60%; }
+    70%  { width: 80%; }
+    100% { width: 100%; }
+}
+@keyframes loader-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+}
+
+/* --- PAGE ENTER FADE --- */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+}
+@keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-24px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* --- UTILITY ANIMATION CLASSES --- */
+.anim-fade-up      { animation: fadeInUp   0.5s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-fade-down    { animation: fadeInDown 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-fade         { animation: fadeIn     0.4s ease both; }
+.anim-scale        { animation: scaleIn    0.4s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-slide-left   { animation: slideInLeft  0.5s cubic-bezier(0.22,1,0.36,1) both; }
+.anim-slide-right  { animation: slideInRight 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* Stagger delays */
+.delay-1  { animation-delay: 0.05s; }
+.delay-2  { animation-delay: 0.10s; }
+.delay-3  { animation-delay: 0.15s; }
+.delay-4  { animation-delay: 0.20s; }
+.delay-5  { animation-delay: 0.25s; }
+.delay-6  { animation-delay: 0.30s; }
+.delay-7  { animation-delay: 0.35s; }
+.delay-8  { animation-delay: 0.40s; }
+
+/* --- SCROLL REVEAL --- */
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s cubic-bezier(0.22,1,0.36,1),
+                transform 0.6s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* --- MODAL OPEN ANIMATION --- */
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+.modal-animate {
+    animation: modalSlideIn 0.3s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* --- BUTTON MICRO-INTERACTIONS --- */
+.btn, .btn-primary, .btn-secondary, .btn-danger, .btn-buy, .btn-pay {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease !important;
+}
+.btn:active, .btn-buy:active, .btn-pay:active {
+    transform: scale(0.97) !important;
+}
+
+/* --- CARD HOVER LIFT (for admin cards) --- */
+.card-hover {
+    transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+}
+.card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+}
+
+/* --- TABLE ROW HOVER FADE --- */
+tbody tr {
+    transition: background 0.2s ease;
+}
+
+/* ============================================================
+   SKELETON LOADER SYSTEM
+   ============================================================ */
+
+/* Base shimmer animation */
+@keyframes skeleton-shimmer {
+    0%   { background-position: -800px 0; }
+    100% { background-position:  800px 0; }
+}
+
+/* Light mode skeleton */
+.skeleton {
+    background: linear-gradient(90deg,
+        #e2e8f0 25%,
+        #f1f5f9 50%,
+        #e2e8f0 75%);
+    background-size: 800px 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+    border-radius: 8px;
+}
+
+/* Dark mode skeleton */
+:root.dark-mode .skeleton {
+    background: linear-gradient(90deg,
+        #1e2235 25%,
+        #2d3248 50%,
+        #1e2235 75%);
+    background-size: 800px 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Skeleton wrapper: hides real content while showing skeletons */
+.sk-wrap { display: none; }
+.sk-wrap.sk-active { display: block; }
+
+.sk-real { display: block; }
+.sk-real.sk-hidden { display: none !important; }
+
+/* ---- INDEX PAGE: Product Card Skeleton ---- */
+.sk-card {
+    background: var(--bg-surface, #fff);
+    border-radius: 16px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    overflow: hidden;
+}
+:root.dark-mode .sk-card {
+    background: #1b1e2b;
+    border-color: #2d3248;
+}
+.sk-img  { width: 100%; height: 220px; }
+.sk-body { padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.sk-tag  { height: 28px; width: 40%; border-radius: 8px; }
+.sk-title-lg  { height: 22px; width: 80%; border-radius: 6px; }
+.sk-title-sm  { height: 22px; width: 50%; border-radius: 6px; }
+.sk-btn  { height: 48px; width: 100%; border-radius: 10px; margin-top: 12px; }
+
+/* ---- CHECKOUT PAGE: Skeleton ---- */
+.sk-checkout-img  { width: 100%; aspect-ratio: 16/9; border-radius: 16px; }
+.sk-checkout-title { height: 36px; width: 70%; border-radius: 8px; margin-bottom: 12px; }
+.sk-checkout-price { height: 28px; width: 40%; border-radius: 8px; margin-bottom: 20px; }
+.sk-variant { height: 64px; width: 100%; border-radius: 12px; }
+.sk-line    { height: 16px; border-radius: 6px; }
+.sk-line.w40 { width: 40%; }
+.sk-line.w70 { width: 70%; }
+.sk-line.w100 { width: 100%; }
+
+/* ---- ADMIN PAGE: Table Row Skeleton ---- */
+.sk-tr td { padding: 16px !important; }
+.sk-cell  { height: 18px; border-radius: 6px; }
+.sk-cell.w30 { width: 30%; }
+.sk-cell.w50 { width: 50%; }
+.sk-cell.w80 { width: 80%; }
+.sk-avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+
+/* ---- ADMIN: Stat Card Skeleton ---- */
+.sk-stat-icon { width: 48px; height: 48px; border-radius: 12px; }
+.sk-stat-label { height: 12px; width: 80px; border-radius: 4px; margin-bottom: 8px; }
+.sk-stat-val   { height: 28px; width: 50px; border-radius: 6px; }
