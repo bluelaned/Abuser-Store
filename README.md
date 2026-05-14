@@ -1,66 +1,268 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<h1 align="center">
+  <br>
+  🛒 Abuser Store
+  <br>
+</h1>
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  A modern e-commerce platform built with Laravel — featuring multi-payment gateway support, Discord OAuth, membership tiers, promo codes, and a powerful admin dashboard.
 </p>
 
-## About Laravel
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-10.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" />
+  <img src="https://img.shields.io/badge/PHP-8.1+-777BB4?style=for-the-badge&logo=php&logoColor=white" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## ✨ Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- 🔐 **Authentication** — Email/password login + Discord OAuth integration
+- 🛍️ **Product Management** — Products with multiple variants, images, stock tracking, and USD/IDR pricing
+- 💳 **Multi-Payment Gateway** — Midtrans (IDR) & Stripe (USD) payment integration
+- 🎟️ **Promo & Voucher System** — Discount codes with usage limits, expiry dates, and advanced rules
+- 👑 **Membership Tier System** — Bronze → Silver → Gold → Platinum → Diamond tiers with animated profile frames
+- ⭐ **Reviews** — User product reviews and ratings
+- 🗂️ **Admin Dashboard** — Full CRUD for products, transactions, users, promos, and vouchers
+- 👤 **User Profile** — Customizable profile with bio, banner, and equipped tier frame
+- 🌐 **Multi-language Support** — Dynamic language switching (EN/ID)
+- 📄 **Invoice Generation** — Auto-generated invoices for completed transactions
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🛠️ Tech Stack
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+| Layer | Technology |
+|-------|------------|
+| Backend | Laravel 10 (PHP 8.1+) |
+| Frontend | Blade Templates + Vite |
+| Database | MySQL |
+| Auth | Laravel Sanctum + Laravel Socialite |
+| Payment | Midtrans PHP SDK + Stripe PHP SDK |
+| OAuth | Discord (via SocialiteProviders) |
+| HTTP Client | Guzzle 7 |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## 📋 Requirements
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- PHP >= 8.1
+- Composer
+- MySQL / MariaDB
+- Node.js & NPM
+- XAMPP / Laragon / any local server
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## 🚀 Installation
 
-## Contributing
+### 1. Clone the repository
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+git clone https://github.com/bluelaned/Abuser-Store.git
+cd Abuser-Store
+```
 
-## Code of Conduct
+### 2. Install PHP dependencies
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+composer install
+```
 
-## Security Vulnerabilities
+### 3. Install Node dependencies
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+npm install
+```
 
-## License
+### 4. Configure environment
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+Then edit `.env` and fill in your configuration (see [Environment Variables](#-environment-variables) below).
+
+### 5. Run database migrations
+
+```bash
+php artisan migrate
+```
+
+### 6. Set up storage symlink
+
+```bash
+php artisan storage:link
+```
+
+### 7. Build frontend assets
+
+```bash
+npm run dev
+```
+
+### 8. Start the server
+
+```bash
+php artisan serve
+```
+
+Visit `http://localhost:8000` in your browser.
+
+---
+
+## ⚙️ Environment Variables
+
+Copy `.env.example` to `.env` and configure the following:
+
+```env
+# App
+APP_NAME="Abuser Store"
+APP_URL=http://localhost
+
+# Database
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=abuser_store
+DB_USERNAME=root
+DB_PASSWORD=
+
+# Discord OAuth
+DISCORD_CLIENT_ID=your_discord_client_id
+DISCORD_CLIENT_SECRET=your_discord_client_secret
+DISCORD_REDIRECT_URI=http://localhost:8000/auth/discord/callback
+
+# Midtrans (IDR Payments)
+MIDTRANS_SERVER_KEY=your_midtrans_server_key
+MIDTRANS_CLIENT_KEY=your_midtrans_client_key
+MIDTRANS_IS_PRODUCTION=false
+
+# Stripe (USD Payments)
+STRIPE_KEY=your_stripe_publishable_key
+STRIPE_SECRET=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+```
+
+---
+
+## 👑 Setting Admin Account
+
+After registering an account, you can promote it to admin by running:
+
+```bash
+php set_admin.php
+```
+
+Or manually update the `users` table:
+
+```sql
+UPDATE users SET is_admin = 1 WHERE email = 'your@email.com';
+```
+
+---
+
+## 📁 Project Structure
+
+```
+abuser-store/
+├── app/
+│   ├── Http/Controllers/
+│   │   ├── AuthController.php          # Login & Register
+│   │   ├── DiscordAuthController.php   # Discord OAuth
+│   │   ├── ProductController.php       # Product CRUD
+│   │   ├── PaymentController.php       # Midtrans & Stripe
+│   │   ├── TransactionController.php   # Order management
+│   │   ├── ProfileController.php       # User profile
+│   │   ├── PromoController.php         # Promo codes
+│   │   ├── VoucherController.php       # Vouchers
+│   │   ├── ReviewController.php        # Reviews
+│   │   └── AdminUserController.php     # Admin: user management
+│   └── Models/
+│       ├── User.php
+│       ├── Product.php
+│       ├── Variant.php
+│       ├── Transaction.php
+│       ├── Promo.php
+│       ├── VoucherCode.php
+│       ├── Review.php
+│       └── ProductImage.php
+├── resources/views/
+│   ├── admin/                          # Admin dashboard views
+│   ├── auth/                           # Login & register
+│   ├── profile/                        # User profile
+│   ├── payment/                        # Payment pages
+│   ├── checkout.blade.php
+│   ├── index.blade.php                 # Storefront
+│   └── reviews.blade.php
+├── database/migrations/                # 33 migrations
+├── public/
+│   └── storage/                        # Uploaded images
+└── routes/
+    └── web.php
+```
+
+---
+
+## 💳 Payment Flow
+
+```
+User selects product & variant
+        ↓
+    Checkout page
+        ↓
+  Select currency (IDR / USD)
+        ↓
+  ┌─────────────────┐
+  │  IDR → Midtrans │  (Credit Card, QRIS, Bank Transfer, E-wallet)
+  │  USD → Stripe   │  (Credit Card)
+  └─────────────────┘
+        ↓
+  Payment Callback / Webhook
+        ↓
+  Transaction marked as PAID
+        ↓
+  Voucher/digital goods delivered
+```
+
+---
+
+## 👤 Membership Tiers
+
+| Tier | Badge | Benefit |
+|------|-------|---------|
+| 🥉 Bronze | Default | Basic access |
+| 🥈 Silver | Silver frame | Silver perks |
+| 🥇 Gold | Gold animated frame | Gold perks |
+| 💎 Platinum | Platinum crystal frame | Platinum perks |
+| 💠 Diamond | Diamond electric frame | Premium perks |
+
+Membership tiers are calculated based on total spending. Users can equip animated profile frames based on their tier.
+
+---
+
+## 🔒 Security Notes
+
+- Never commit your `.env` file — it is already in `.gitignore`
+- Rotate your GitHub Personal Access Token after use
+- Use environment variables for all API keys and secrets
+- Set `APP_DEBUG=false` and `APP_ENV=production` in production
+
+---
+
+## 📄 License
+
+This project is open-source and available under the [MIT License](LICENSE).
+
+---
+
+## 👤 Author
+
+**bluelaned** — [github.com/bluelaned](https://github.com/bluelaned)
+
+---
+
+<p align="center">Made with ❤️ using Laravel</p>
