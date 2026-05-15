@@ -10,6 +10,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\DiscordAuthController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AnnouncementController;
 
 // --- HALAMAN PUBLIK ---
 Route::get('/', [ProductController::class, 'index'])->name('home');
@@ -18,7 +19,7 @@ Route::view('/terms', 'tos')->name('tos');
 Route::view('/privacy', 'privacy')->name('privacy');
 Route::get('/reviews', [App\Http\Controllers\ReviewController::class, 'publicIndex'])->name('reviews.index');
 
-Route::post('/checkout/check-promo', [PaymentController::class, 'checkPromo'])->name('payment.check_promo');
+Route::post('/checkout/check-promo', [PaymentController::class, 'checkPromo'])->name('payment.check_promo')->middleware('throttle:15,1');
 Route::post('/checkout/process', [PaymentController::class, 'process'])->name('payment.process');
 Route::post('/payment/stripe', [TransactionController::class, 'stripeProcess'])->name('payment.stripe');
 
@@ -49,7 +50,7 @@ Route::post('/profile/{name}.{id}/bio', [App\Http\Controllers\ProfileController:
 Route::post('/profile/{name}.{id}/avatar', [App\Http\Controllers\ProfileController::class, 'updateAvatarAndFrame'])->name('profile.update_avatar')->middleware('auth');
 
 // --- HALAMAN ADMIN (Wajib Login & Role Admin) ---
-Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+Route::middleware(['auth', 'admin', 'throttle:60,1'])->prefix('admin')->group(function () {
     
     Route::get('/dashboard', [ProductController::class, 'adminDashboard'])->name('admin.dashboard');
 
@@ -84,4 +85,14 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::get('/reviews', [App\Http\Controllers\ReviewController::class, 'index'])->name('admin.reviews.index');
     Route::patch('/reviews/{id}/toggle-publish', [App\Http\Controllers\ReviewController::class, 'togglePublish'])->name('admin.reviews.toggle_publish');
     Route::delete('/reviews/{id}', [App\Http\Controllers\ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
+
+    // Announcements
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('admin.announcements');
+    Route::post('/announcements', [AnnouncementController::class, 'store'])->name('admin.announcements.store');
+    Route::put('/announcements/{id}', [AnnouncementController::class, 'update'])->name('admin.announcements.update');
+    Route::patch('/announcements/{id}/toggle', [AnnouncementController::class, 'toggle'])->name('admin.announcements.toggle');
+    Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy'])->name('admin.announcements.destroy');
 });
+
+// --- PUBLIC API ---
+Route::get('/api/announcements/active', [AnnouncementController::class, 'activeForUser'])->name('announcements.active')->middleware('throttle:30,1');

@@ -183,6 +183,15 @@
                 </a>
             @endauth
 
+            <!-- NAVBAR BELL ICON -->
+            <button id="annBellBtn" onclick="reopenAnn()" title="View Announcements" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding: 4px; display:none; position:relative;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span id="annBellDot" style="position:absolute; top:2px; right:4px; width:8px; height:8px; border-radius:50%; background:#ef4444; border:2px solid var(--bg-body); display:none;"></span>
+            </button>
+
             <button id="themeToggleBtn" onclick="toggleTheme()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; padding: 4px; display:flex;">
                 <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <!-- Default Sun Icon -->
@@ -416,5 +425,384 @@
             setTimeout(revealProducts, 600);
         });
     </script>
+
+    {{-- ==================== ANNOUNCEMENT POPUP ==================== --}}
+    <style>
+        /* === OVERLAY: centered, no heavy blur for performance === */
+        #annPopupOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            z-index: 99998;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        #annPopupOverlay.ann-visible { display: flex; }
+
+        /* === POPUP BOX === */
+        #annPopupBox {
+            background: linear-gradient(145deg, #1a1d2e 0%, #13151f 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 85vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+            position: relative;
+            transform: scale(0.88) translateY(24px);
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.35s ease;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        #annPopupBox.ann-enter {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+
+        /* Accent top bar */
+        #annPopupBox::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2563eb, #7c3aed, #2563eb);
+            background-size: 200% 100%;
+            border-radius: 20px 20px 0 0;
+            animation: annGradShift 3s linear infinite;
+        }
+        @keyframes annGradShift {
+            0%   { background-position: 0% 0%; }
+            100% { background-position: 200% 0%; }
+        }
+
+        /* Style variants */
+        #annPopupBox.style-warning::before { background: linear-gradient(90deg, #d97706, #f59e0b, #d97706); background-size:200% 100%; }
+        #annPopupBox.style-success::before { background: linear-gradient(90deg, #059669, #10b981, #059669); background-size:200% 100%; }
+        #annPopupBox.style-promo::before   { background: linear-gradient(90deg, #7c3aed, #a855f7, #7c3aed); background-size:200% 100%; }
+
+        /* === POPUP HEADER === */
+        .ann-header-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 22px 24px 0;
+            gap: 12px;
+        }
+        .ann-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0;
+        }
+        .ann-icon-badge {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: rgba(37, 99, 235, 0.18);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+        #annPopupBox.style-warning .ann-icon-badge { background: rgba(217,119,6,.18); border-color: rgba(217,119,6,.3); }
+        #annPopupBox.style-success .ann-icon-badge { background: rgba(5,150,105,.18); border-color: rgba(5,150,105,.3); }
+        #annPopupBox.style-promo   .ann-icon-badge { background: rgba(124,58,237,.18); border-color: rgba(124,58,237,.3); }
+
+        .ann-title-text {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .ann-label-badge {
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #2563eb;
+            background: rgba(37,99,235,0.12);
+            padding: 2px 7px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        #annPopupBox.style-warning .ann-label-badge { color:#d97706; background:rgba(217,119,6,.12); }
+        #annPopupBox.style-success .ann-label-badge { color:#059669; background:rgba(5,150,105,.12); }
+        #annPopupBox.style-promo   .ann-label-badge { color:#a855f7; background:rgba(168,85,247,.12); }
+
+        .ann-close-x {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem;
+            transition: background .2s, color .2s, transform .15s;
+            flex-shrink: 0;
+        }
+        .ann-close-x:hover { background: rgba(255,255,255,0.07); color: #f1f5f9; transform: rotate(90deg); }
+
+        /* === POPUP BODY === */
+        .ann-content-wrap {
+            padding: 18px 24px 20px;
+            font-size: 0.875rem;
+            line-height: 1.75;
+            color: #94a3b8;
+        }
+        .ann-content-wrap p { margin: 0 0 10px; }
+        .ann-content-wrap a { color: #60a5fa; text-decoration: underline; }
+        .ann-content-wrap strong, .ann-content-wrap b { color: #e2e8f0; }
+        .ann-content-wrap ul, .ann-content-wrap ol { margin: 8px 0 8px 18px; }
+
+        /* === FOOTER NAV === */
+        .ann-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px 20px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .ann-dots-row { display: flex; gap: 6px; align-items: center; }
+        .ann-dot-new {
+            width: 7px; height: 7px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.18);
+            cursor: pointer;
+            transition: width .25s, background .25s, border-radius .25s;
+        }
+        .ann-dot-new.active {
+            width: 22px;
+            border-radius: 4px;
+            background: #2563eb;
+        }
+        #annPopupBox.style-warning .ann-dot-new.active { background: #d97706; }
+        #annPopupBox.style-success .ann-dot-new.active { background: #059669; }
+        #annPopupBox.style-promo   .ann-dot-new.active { background: #a855f7; }
+
+        .ann-btns-row { display: flex; gap: 8px; }
+        .ann-btn-ghost {
+            padding: 7px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            transition: .2s;
+        }
+        .ann-btn-ghost:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+        .ann-btn-primary {
+            padding: 7px 18px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+            transition: .2s;
+        }
+        .ann-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,99,235,0.45); }
+        #annPopupBox.style-warning .ann-btn-primary { background: linear-gradient(135deg,#d97706,#b45309); box-shadow:0 4px 12px rgba(217,119,6,.3); }
+        #annPopupBox.style-success .ann-btn-primary { background: linear-gradient(135deg,#059669,#047857); box-shadow:0 4px 12px rgba(5,150,105,.3); }
+        #annPopupBox.style-promo   .ann-btn-primary { background: linear-gradient(135deg,#7c3aed,#6d28d9); box-shadow:0 4px 12px rgba(124,58,237,.3); }
+
+    </style>
+
+    <!-- Overlay -->
+    <div id="annPopupOverlay">
+        <div id="annPopupBox">
+            <!-- Header -->
+            <div class="ann-header-wrap">
+                <div class="ann-header-left">
+                    <div class="ann-icon-badge" id="annPopupIcon">📢</div>
+                    <div style="min-width:0;">
+                        <div class="ann-title-text" id="annPopupTitle">Announcement</div>
+                        <div class="ann-label-badge" id="annStyleLabel">ANNOUNCEMENT</div>
+                    </div>
+                </div>
+                <button class="ann-close-x" onclick="dismissCurrentAnn()" title="Close">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="ann-content-wrap" id="annPopupBody"></div>
+
+            <!-- Footer nav (multi-announcement) -->
+            <div class="ann-footer" id="annPopupNav" style="display:none;">
+                <div class="ann-dots-row" id="annDots"></div>
+                <div class="ann-btns-row">
+                    <button class="ann-btn-ghost" id="annPrevBtn" onclick="showAnn(currentAnnIdx - 1)">← Prev</button>
+                    <button class="ann-btn-primary" id="annNextBtn" onclick="showAnn(currentAnnIdx + 1)">Next →</button>
+                </div>
+            </div>
+
+            <!-- Single ann footer -->
+            <div id="annSingleFooter" style="padding:0 24px 20px; display:flex; justify-content:flex-end;">
+                <button class="ann-btn-primary" onclick="dismissCurrentAnn()">Got it ✓</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const DISMISS_KEY = 'abuser_dismissed_anns';
+
+        function getDismissed() {
+            try { return JSON.parse(localStorage.getItem(DISMISS_KEY) || '[]'); } catch { return []; }
+        }
+        function addDismissed(id) {
+            const d = getDismissed();
+            if (!d.includes(id)) d.push(id);
+            localStorage.setItem(DISMISS_KEY, JSON.stringify(d));
+        }
+
+        let allAnns = [], allAnnsOriginal = [], currentAnnIdx = 0;
+
+        const STYLE_LABELS = { default:'ANNOUNCEMENT', warning:'WARNING', success:'NOTICE', promo:'PROMO 🎁' };
+        const STYLE_ICONS  = { default:'📢', warning:'⚠️', success:'✅', promo:'🎁' };
+
+        function loadAnnouncements() {
+            fetch('/api/announcements/active')
+                .then(r => r.json())
+                .then(data => {
+                    allAnnsOriginal = data;
+                    const dismissed = getDismissed();
+                    allAnns = data.filter(a => !dismissed.includes(a.id));
+                    if (allAnns.length > 0) {
+                        renderDots();
+                        setTimeout(() => showAnn(0), 400); // slight delay after page load
+                    }
+                    // Show bell if there are any announcements (even dismissed ones)
+                    if (data.length > 0) showBell();
+                })
+                .catch(() => {});
+        }
+
+        function showBell() {
+            const btn = document.getElementById('annBellBtn');
+            if (btn) btn.style.display = 'flex';
+            
+            const dot = document.getElementById('annBellDot');
+            if (dot) {
+                // Show dot only if there are unread announcements
+                if (allAnns.length > 0) {
+                    dot.style.display = 'block';
+                } else {
+                    dot.style.display = 'none';
+                }
+            }
+        }
+
+        function renderDots() {
+            const wrap = document.getElementById('annDots');
+            wrap.innerHTML = '';
+            allAnns.forEach((_, i) => {
+                const d = document.createElement('div');
+                d.className = 'ann-dot-new' + (i === 0 ? ' active' : '');
+                d.onclick = () => showAnn(i);
+                wrap.appendChild(d);
+            });
+            const isMulti = allAnns.length > 1;
+            document.getElementById('annPopupNav').style.display    = isMulti ? 'flex' : 'none';
+            document.getElementById('annSingleFooter').style.display = isMulti ? 'none' : 'flex';
+        }
+
+        window.showAnn = function(idx) {
+            if (idx < 0 || idx >= allAnns.length) return;
+            currentAnnIdx = idx;
+            const ann = allAnns[idx];
+            const box = document.getElementById('annPopupBox');
+
+            // Apply style class
+            box.className = '';
+            if (ann.popup_style && ann.popup_style !== 'default') {
+                box.classList.add('style-' + ann.popup_style);
+            }
+
+            document.getElementById('annPopupIcon').textContent  = STYLE_ICONS[ann.popup_style]  || '📢';
+            document.getElementById('annStyleLabel').textContent  = STYLE_LABELS[ann.popup_style] || 'ANNOUNCEMENT';
+            document.getElementById('annPopupTitle').textContent  = ann.title;
+            document.getElementById('annPopupBody').innerHTML     = ann.content;
+
+            // Dots
+            document.querySelectorAll('.ann-dot-new').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+            // Multi nav buttons
+            const prevBtn = document.getElementById('annPrevBtn');
+            const nextBtn = document.getElementById('annNextBtn');
+            if (prevBtn) { prevBtn.disabled = idx === 0; prevBtn.style.opacity = idx === 0 ? '0.4' : '1'; }
+            if (nextBtn) {
+                if (idx === allAnns.length - 1) {
+                    nextBtn.textContent = 'Done ✓';
+                    nextBtn.onclick = () => dismissCurrentAnn();
+                } else {
+                    nextBtn.textContent = 'Next →';
+                    nextBtn.onclick = () => showAnn(currentAnnIdx + 1);
+                }
+            }
+
+            // Show overlay + animate box in
+            const overlay = document.getElementById('annPopupOverlay');
+            overlay.classList.add('ann-visible');
+            document.body.style.overflow = 'hidden';
+
+            // Trigger enter animation on next frame
+            requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('ann-enter')));
+        };
+
+        function hideOverlay() {
+            const overlay = document.getElementById('annPopupOverlay');
+            const box = document.getElementById('annPopupBox');
+            box.classList.remove('ann-enter'); // triggers exit (scale down)
+            setTimeout(() => {
+                overlay.classList.remove('ann-visible');
+                document.body.style.overflow = '';
+            }, 320);
+        }
+
+        window.dismissCurrentAnn = function() {
+            if (allAnns[currentAnnIdx]) addDismissed(allAnns[currentAnnIdx].id);
+
+            const dismissed = getDismissed();
+            allAnns = allAnns.filter(a => !dismissed.includes(a.id));
+
+            if (allAnns.length > 0 && currentAnnIdx < allAnns.length) {
+                renderDots();
+                showAnn(Math.min(currentAnnIdx, allAnns.length - 1));
+            } else {
+                hideOverlay();
+                showBell(); // always show bell after close
+            }
+        };
+
+        // Reopen with ALL announcements (including dismissed ones) on bell click
+        window.reopenAnn = function() {
+            allAnns = allAnnsOriginal.slice(); // restore all
+            if (allAnns.length === 0) return;
+            renderDots();
+            showAnn(0);
+        };
+
+        // Close overlay click
+        document.getElementById('annPopupOverlay').addEventListener('click', function(e) {
+            if (e.target === this) dismissCurrentAnn();
+        });
+
+        document.addEventListener('DOMContentLoaded', loadAnnouncements);
+    })();
+    </script>
 </body>
-</html>
+</html>

@@ -379,6 +379,13 @@
                 </svg>
                 <span data-tr="manage_reviews">Manage Reviews</span>
             </a>
+
+            <a href="{{ route('admin.announcements') }}" class="nav-link {{ request()->routeIs('admin.announcements') ? 'active' : '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                </svg>
+                <span data-tr="manage_announcements">Announcements</span>
+            </a>
         </nav>
 
         <form action="{{ route('logout') }}" method="POST">
@@ -497,7 +504,15 @@
                 max_discount_desc: "Batas maksimal potongan untuk tipe Persentase (%). Isi 0 untuk tanpa batas.",
                 usage_limit_desc: "Batas pemakaian per pengguna. Isi 0 untuk tanpa batas.",
                 min_qty_desc: "Jumlah produk minimal dalam satu transaksi agar promo ini berlaku.",
-                specific_product_desc: "Tentukan apakah promo ini hanya berlaku untuk produk tertentu atau semua produk."
+                specific_product_desc: "Tentukan apakah promo ini hanya berlaku untuk produk tertentu atau semua produk.",
+                manage_announcements: "Pengumuman",
+                create_announcement: "Buat Pengumuman",
+                ann_title: "Judul",
+                ann_style: "Gaya",
+                ann_schedule: "Jadwal",
+                ann_created: "Dibuat Oleh",
+                ann_active: "Aktif",
+                save_publish: "Simpan & Publikasi"
             }
         };
 

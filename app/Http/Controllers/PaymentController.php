@@ -18,6 +18,17 @@ class PaymentController extends Controller
     {
         \Log::info("--- CHECKOUT HIT ---", $request->all());
 
+        // 0. Rate Limiting (Prevent Spam & Double Click)
+        $userId = auth()->id() ?? request()->ip();
+        $rateLimitKey = 'checkout-spam-limit:' . $userId;
+        
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            \Log::warning('Checkout Spam Detected for User/IP: ' . $userId);
+            return back()->with('error', 'Harap tunggu beberapa detik sebelum mencoba checkout lagi (Mencegah spam).');
+        }
+        
+        \Illuminate\Support\Facades\RateLimiter::hit($rateLimitKey, 10); // Block for 10 seconds
+
         // 1. Ambil Data
         $variant = Variant::with('product')->find($request->variant_id);
         
@@ -365,24 +376,31 @@ class PaymentController extends Controller
                     // Sudah diproses oleh Webhook Callback
                     $issuedCodes = explode(", ", $trx->vouchers_issued);
                 } else {
-                    // Belum diproses, potong stok sekarang
-                    $vouchers = \App\Models\VoucherCode::where('variant_id', $trx->variant_id)
-                                                       ->where('status', 'AVAILABLE')
-                                                       ->take($trx->quantity)
-                                                       ->get();
-                    
-                    foreach ($vouchers as $vc) {
-                        $vc->update(['status' => 'SOLD']);
-                        $issuedCodes[] = $vc->code;
-                    }
-                    
-                    if (!empty($issuedCodes)) {
-                        $trx->update([
-                            'status' => 'PAID',
-                            'vouchers_issued' => implode(", ", $issuedCodes)
-                        ]);
-                        $shouldSendDM = true;
-                    }
+                    // Belum diproses, potong stok sekarang dengan DB Transaction & Pessimistic Locking
+                    \Illuminate\Support\Facades\DB::transaction(function() use ($trx, &$issuedCodes, &$shouldSendDM) {
+                        $vouchers = \App\Models\VoucherCode::where('variant_id', $trx->variant_id)
+                                                           ->where('status', 'AVAILABLE')
+                                                           ->lockForUpdate() // Prevent Race Condition & Overselling
+                                                           ->take($trx->quantity)
+                                                           ->get();
+                        
+                        if ($vouchers->count() >= $trx->quantity) {
+                            foreach ($vouchers as $vc) {
+                                $vc->update(['status' => 'SOLD']);
+                                $issuedCodes[] = $vc->code;
+                            }
+                            
+                            $trx->update([
+                                'status' => 'PAID',
+                                'vouchers_issued' => implode(", ", $issuedCodes)
+                            ]);
+                            $shouldSendDM = true;
+                        } else {
+                            // Mencegah overselling jika stok habis saat pembayaran berhasil
+                            \Log::error('Race condition prevented! Not enough vouchers available for Order: ' . $trx->reference);
+                            $trx->update(['status' => 'FAILED_OVERSOLD']);
+                        }
+                    });
                 }
             }
         }
@@ -538,30 +556,36 @@ class PaymentController extends Controller
                 'Content-Type'  => 'application/json',
             ];
 
-            // Step 1: Buat DM channel dengan user
+            // Step 1: Buat DM channel dengan user (dengan retry otomatis)
             $dmRes = Http::timeout(5)
                 ->withHeaders($headers)
+                ->retry(3, 1000) // Retry 3 kali, delay 1 detik (1000ms)
                 ->post('https://discord.com/api/v10/users/@me/channels', [
                     'recipient_id' => $discordId,
                 ]);
 
             if (!$dmRes->successful()) {
-                \Log::warning('Discord DM channel error: ' . $dmRes->body());
+                \Log::critical('Discord DM channel creation FAILED permanently after 3 retries.', ['response' => $dmRes->body(), 'discord_id' => $discordId]);
                 return;
             }
 
             $channelId = $dmRes->json('id');
 
-            // Step 2: Kirim pesan embed ke DM channel
-            Http::timeout(5)
+            // Step 2: Kirim pesan embed ke DM channel (dengan retry otomatis)
+            $msgRes = Http::timeout(5)
                 ->withHeaders($headers)
+                ->retry(3, 1000) // Retry 3 kali, delay 1 detik
                 ->post("https://discord.com/api/v10/channels/{$channelId}/messages", [
                     'content' => '> 🛒 **ABUSER STORE** – Invoice Pembayaran Kamu',
                     'embeds'  => [$embed],
                 ]);
+                
+            if (!$msgRes->successful()) {
+                \Log::critical('Discord message sending FAILED permanently after 3 retries.', ['response' => $msgRes->body(), 'channel_id' => $channelId]);
+            }
 
         } catch (\Exception $e) {
-            \Log::warning('Discord DM failed: ' . $e->getMessage());
+            \Log::critical('Discord DM FATAL ERROR: ' . $e->getMessage(), ['discord_id' => $discordId]);
         }
     }
 

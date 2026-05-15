@@ -195,6 +195,7 @@ class ProductController extends Controller
         if ($product->image) { 
             Storage::disk('public')->delete($product->image); 
         }
+        \Log::warning('ADMIN ACTION: Product Deleted by User ID: ' . auth()->id() . ' | Product Name: ' . $product->name);
         $product->delete();
         return redirect()->route('admin.dashboard')->with('success', 'Produk Dihapus');
     }

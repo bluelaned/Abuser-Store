@@ -25,6 +25,20 @@ class CallbackController extends Controller
             $trx = Transaction::where('reference', $order_id)->first();
 
             if ($trx) {
+                // 1. PAYMENT FRAUD VALIDATION (Amount Mismatch)
+                $paidAmount = (float) $notif->gross_amount;
+                $expectedAmount = (float) $trx->price;
+
+                if (abs($paidAmount - $expectedAmount) > 1) { // Toleransi 1 rupiah/sen
+                    \Log::critical('PAYMENT FRAUD ATTEMPT: Amount mismatch in webhook.', [
+                        'order_id' => $order_id,
+                        'paid_amount' => $paidAmount,
+                        'expected_amount' => $expectedAmount
+                    ]);
+                    $trx->update(['status' => 'FRAUD']);
+                    return response()->json(['message' => 'Invalid Amount'], 400);
+                }
+
                 if ($transaction == 'settlement' || ($transaction == 'capture' && $fraud != 'challenge')) {
                     if ($trx->status !== 'PAID') {
                         $paymentDetails = ['type' => $type];
@@ -37,27 +51,37 @@ class CallbackController extends Controller
                             $paymentDetails['bank'] = $notif->bank;
                         }
 
-                        $trx->update([
-                            'status' => 'PAID',
-                            'payment_details' => json_encode($paymentDetails)
-                        ]);
+                        // 2. MENCEGAH RACE CONDITION DI WEBHOOK DENGAN DB LOCKING
+                        $issuedCodes = [];
                         
-                        // Deduct stock for Midtrans
-                        if (empty($trx->vouchers_issued)) {
-                            $vouchers = \App\Models\VoucherCode::where('variant_id', $trx->variant_id)
-                                                               ->where('status', 'AVAILABLE')
-                                                               ->take($trx->quantity)
-                                                               ->get();
+                        \Illuminate\Support\Facades\DB::transaction(function() use ($trx, &$issuedCodes, $paymentDetails) {
+                            $trx->update([
+                                'status' => 'PAID',
+                                'payment_details' => json_encode($paymentDetails)
+                            ]);
                             
-                            $issuedCodes = [];
-                            foreach ($vouchers as $vc) {
-                                $vc->update(['status' => 'SOLD']);
-                                $issuedCodes[] = $vc->code;
+                            if (empty($trx->vouchers_issued)) {
+                                $vouchers = \App\Models\VoucherCode::where('variant_id', $trx->variant_id)
+                                                                   ->where('status', 'AVAILABLE')
+                                                                   ->lockForUpdate() // Prevent Overselling
+                                                                   ->take($trx->quantity)
+                                                                   ->get();
+                                
+                                if ($vouchers->count() >= $trx->quantity) {
+                                    foreach ($vouchers as $vc) {
+                                        $vc->update(['status' => 'SOLD']);
+                                        $issuedCodes[] = $vc->code;
+                                    }
+                                    
+                                    if (!empty($issuedCodes)) {
+                                        $trx->update(['vouchers_issued' => implode(", ", $issuedCodes)]);
+                                    }
+                                } else {
+                                    \Log::critical('WEBHOOK OVERSOLD PREVENTED: Order ' . $trx->reference);
+                                    $trx->update(['status' => 'FAILED_OVERSOLD']);
+                                }
                             }
-                            
-                            if (!empty($issuedCodes)) {
-                                $trx->update(['vouchers_issued' => implode(", ", $issuedCodes)]);
-                            }
+                        });
                             
                             // Send Discord Notification
                             $user = \App\Models\User::where('email', $trx->customer_email)->first();
