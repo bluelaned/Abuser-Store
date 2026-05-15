@@ -15,7 +15,7 @@
 
 <div class="card" style="background: var(--bg-body); border: 1px dashed var(--border-color);">
     <h3 style="margin-top:0; color:var(--text-main); margin-bottom: 16px; font-size:1.125rem;" data-tr="create_new_code">Create New Code</h3>
-    <form action="{{ route('admin.promos.store') }}" method="POST" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; align-items: end;">
+    <form action="{{ route('admin.promos.store') }}" method="POST" class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; align-items: end;">
         @csrf
         
         <div class="form-group" style="margin-bottom: 0;">

@@ -26,7 +26,7 @@
 </div>
 
 {{-- ── Summary Stats ── --}}
-<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+<div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
     {{-- IDR Revenue --}}
     <div class="card" style="padding: 20px 22px; display: flex; align-items: center; gap: 14px; margin:0;">
         <div style="width:42px;height:42px;border-radius:12px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -88,7 +88,7 @@
 </div>
 
 {{-- ── Two-column: Chart + Top Products ── --}}
-<div style="display:grid; grid-template-columns: 1fr 340px; gap: 20px; margin-bottom: 24px; align-items: start;">
+<div class="grid" style="display:grid; grid-template-columns: 1fr 340px; gap: 20px; margin-bottom: 24px; align-items: start;">
 
     {{-- Revenue Chart --}}
     <div class="card" style="padding: 24px; margin:0;">

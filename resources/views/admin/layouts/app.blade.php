@@ -279,6 +279,33 @@
             flex-wrap: nowrap;
             gap: 2px;
         }
+        
+        /* --- MOBILE RESPONSIVE --- */
+        .mobile-toggle { display: none; background: none; border: none; color: var(--text-main); padding: 4px; cursor: pointer; }
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px); }
+        
+        @media (max-width: 768px) {
+            .mobile-toggle { display: block; }
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay.open { display: block; }
+            .main-wrapper { margin-left: 0; width: 100%; }
+            .topbar { padding: 0 16px; }
+            .main-content { padding: 16px; }
+            .topbar-title { font-size: 1rem; }
+            .header-actions { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .card { overflow-x: auto; padding: 16px; }
+            table { min-width: 700px; }
+            .form-grid, .grid { grid-template-columns: 1fr !important; }
+            .modal-content { width: 95% !important; margin: 20px auto !important; }
+            .topbar .btn { padding: 6px; font-size: 0.75rem; }
+            .topbar .btn span { display: none; }
+        }
+
         nav[role="navigation"] span,
         nav[role="navigation"] a {
             display: inline-flex !important;
@@ -398,10 +425,17 @@
             </button>
         </form>
     </div>
+    
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <div class="main-wrapper">
         <header class="topbar anim-fade-down">
-            <div class="topbar-title">@yield('title', 'Dashboard')</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button class="mobile-toggle" onclick="toggleSidebar()">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div class="topbar-title">@yield('title', 'Dashboard')</div>
+            </div>
             <div style="display: flex; gap: 12px; align-items: center;">
                 <button id="langToggleBtn" onclick="toggleLanguage()" class="btn btn-secondary" style="padding: 6px 12px; display: flex; align-items: center; gap: 6px;">
                     <span id="langIcon">🇺🇸</span> <span id="langText">EN</span>
@@ -442,6 +476,11 @@
     </div>
 
     <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-overlay').classList.toggle('open');
+        }
+
         function updateThemeIcon() {
             const isDark = document.documentElement.classList.contains('dark-mode');
             const icon = document.getElementById('themeIcon');
