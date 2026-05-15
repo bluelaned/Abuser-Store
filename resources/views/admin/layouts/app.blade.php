@@ -100,6 +100,8 @@
         .user-avatar {
             width: 40px;
             height: 40px;
+            min-width: 40px;
+            min-height: 40px;
             background: var(--primary);
             border-radius: 50%;
             color: white;
@@ -108,6 +110,7 @@
             justify-content: center;
             font-weight: 600;
             font-size: 1rem;
+            flex-shrink: 0;
         }
 
         .user-info { display: flex; flex-direction: column; }
@@ -321,18 +324,34 @@
         .sidebar-toggle-btn:hover { background: var(--border-color); color: var(--primary); }
         
         /* --- MOBILE RESPONSIVE --- */
-        .sidebar-overlay { display: none; }
-        
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.6);
+            z-index: 997;
+            backdrop-filter: blur(2px);
+        }
+        .sidebar-overlay.open { display: block; }
+
         @media (max-width: 768px) {
             .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.25s ease, width 0.25s ease;
-                z-index: 999;
+                transform: translateX(-100%) !important;
+                transition: transform 0.25s ease !important;
                 width: var(--sidebar-width) !important;
+                z-index: 999;
             }
-            .sidebar.open { transform: translateX(0); }
-            .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 998; backdrop-filter: blur(2px); }
-            .sidebar-overlay.open { display: block; }
+            .sidebar.open { transform: translateX(0) !important; }
+            /* Override any collapsed state on mobile - always show full width */
+            .sidebar.collapsed .nav-text,
+            .sidebar.collapsed .brand-name,
+            .sidebar.collapsed .user-info { opacity: 1 !important; width: auto !important; }
+            .sidebar.collapsed .nav-link { justify-content: flex-start !important; padding: 10px 16px !important; }
+            .sidebar.collapsed .chevron { display: block !important; }
+            .sidebar.collapsed .sub-nav { display: block !important; }
+            .sidebar.collapsed .logout-btn { justify-content: flex-start !important; padding: 16px 24px !important; }
+            .sidebar.collapsed .logout-btn .nav-text { opacity: 1 !important; width: auto !important; }
             .main-wrapper { margin-left: 0 !important; width: 100%; }
             .topbar { padding: 0 16px; }
             .main-content { padding: 16px; }
@@ -415,15 +434,15 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                         </svg>
-                        <span data-tr="products_sales">Products & Sales</span>
+                        <span class="nav-text" data-tr="products_sales">Products & Sales</span>
                     </div>
                     <svg class="chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 </summary>
                 <div class="sub-nav">
-                    <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><span data-tr="product_list">Product List</span></a>
-                    <a href="{{ route('admin.transactions.index') }}" class="nav-link {{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}"><span data-tr="transaction_history">Transaction History</span></a>
+                    <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><span class="nav-text" data-tr="product_list">Product List</span></a>
+                    <a href="{{ route('admin.transactions.index') }}" class="nav-link {{ request()->routeIs('admin.transactions.*') ? 'active' : '' }}"><span class="nav-text" data-tr="transaction_history">Transaction History</span></a>
                 </div>
             </details>
 
@@ -536,12 +555,18 @@
             }
         }
 
-        // Restore desktop collapse state on page load
+        // Restore desktop collapse state on page load (desktop only)
         document.addEventListener('DOMContentLoaded', () => {
-            if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
+            if (window.innerWidth > 768 && localStorage.getItem('sidebar_collapsed') === 'true') {
                 document.getElementById('sidebar').classList.add('collapsed');
                 document.getElementById('mainWrapper').classList.add('collapsed');
             }
+        });
+
+        // Close sidebar overlay when clicking outside on mobile
+        document.querySelector('.sidebar-overlay').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.remove('open');
+            document.querySelector('.sidebar-overlay').classList.remove('open');
         });
 
         function updateThemeIcon() {
