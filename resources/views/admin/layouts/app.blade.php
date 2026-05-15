@@ -22,6 +22,7 @@
             --danger: #ef4444;
             --success: #10b981;
             --sidebar-width: 260px;
+            --sidebar-mini: 68px;
         }
 
         :root.dark-mode {
@@ -59,32 +60,42 @@
             top: 0;
             left: 0;
             z-index: 100;
+            transition: width 0.25s ease;
+            overflow: hidden;
         }
+        .sidebar.collapsed { width: var(--sidebar-mini); }
 
         .brand {
-            padding: 24px;
-            font-size: 1.25rem;
+            padding: 0 16px;
+            height: 64px;
+            font-size: 1.1rem;
             font-weight: 700;
             color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid var(--border-color);
+            justify-content: space-between;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
-        .brand svg {
-            width: 24px;
-            height: 24px;
-            color: var(--primary);
-        }
+        .brand .brand-logo { width: 24px; height: 24px; min-width: 24px; color: var(--primary); }
+        .brand .brand-name { overflow: hidden; transition: opacity 0.2s, width 0.25s; }
+        .sidebar.collapsed .brand-name { opacity: 0; width: 0; }
 
         .user-panel {
-            padding: 24px;
+            padding: 12px 14px;
             display: flex;
             align-items: center;
             gap: 12px;
             border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
         }
+        .user-panel .user-info { transition: opacity 0.2s; }
+        .sidebar.collapsed .user-panel .user-info { opacity: 0; width: 0; overflow: hidden; }
 
         .user-avatar {
             width: 40px;
@@ -123,7 +134,12 @@
             transition: all 0.2s ease;
         }
 
-        .nav-link svg { width: 18px; height: 18px; stroke-width: 2; }
+        .nav-link svg { width: 20px; height: 20px; min-width: 20px; stroke-width: 2; }
+        .nav-link .nav-text { overflow: hidden; white-space: nowrap; transition: opacity 0.2s, width 0.25s; }
+        .sidebar.collapsed .nav-text { opacity: 0; width: 0; }
+        .sidebar.collapsed .nav-link { justify-content: center; padding: 10px; }
+        .sidebar.collapsed .chevron { display: none; }
+        .sidebar.collapsed .sub-nav { display: none; }
         
         .nav-link:hover, .nav-link.active {
             background: var(--border-color);
@@ -165,8 +181,14 @@
             font-size: 0.875rem;
             border-top: 1px solid var(--border-color);
             transition: background 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            flex-shrink: 0;
         }
         .logout-btn:hover { background: #fee2e2; }
+        .logout-btn .nav-text { overflow: hidden; transition: opacity 0.2s, width 0.25s; }
+        .sidebar.collapsed .logout-btn .nav-text { opacity: 0; width: 0; }
+        .sidebar.collapsed .logout-btn { justify-content: center; padding: 16px; }
 
         /* --- MAIN CONTENT --- */
         .main-wrapper {
@@ -174,7 +196,9 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            transition: margin-left 0.25s ease;
         }
+        .main-wrapper.collapsed { margin-left: var(--sidebar-mini); }
 
         .topbar {
             height: 64px;
@@ -183,7 +207,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 32px;
+            padding: 0 24px;
         }
 
         .topbar-title { font-size: 1.125rem; font-weight: 600; }
@@ -280,20 +304,36 @@
             gap: 2px;
         }
         
+        /* --- HAMBURGER TOGGLE (all screens) --- */
+        .sidebar-toggle-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s, color 0.2s;
+        }
+        .sidebar-toggle-btn:hover { background: var(--border-color); color: var(--primary); }
+        
         /* --- MOBILE RESPONSIVE --- */
-        .mobile-toggle { display: none; background: none; border: none; color: var(--text-main); padding: 4px; cursor: pointer; }
-        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 90; backdrop-filter: blur(2px); }
+        .sidebar-overlay { display: none; }
         
         @media (max-width: 768px) {
-            .mobile-toggle { display: block; }
             .sidebar {
                 transform: translateX(-100%);
-                transition: transform 0.3s ease;
-                box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+                transition: transform 0.25s ease, width 0.25s ease;
+                z-index: 999;
+                width: var(--sidebar-width) !important;
             }
             .sidebar.open { transform: translateX(0); }
+            .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 998; backdrop-filter: blur(2px); }
             .sidebar-overlay.open { display: block; }
-            .main-wrapper { margin-left: 0; width: 100%; }
+            .main-wrapper { margin-left: 0 !important; width: 100%; }
             .topbar { padding: 0 16px; }
             .main-content { padding: 16px; }
             .topbar-title { font-size: 1rem; }
@@ -302,7 +342,6 @@
             table { min-width: 700px; }
             .form-grid, .grid { grid-template-columns: 1fr !important; }
             .modal-content { width: 95% !important; margin: 20px auto !important; }
-            .topbar .btn { padding: 6px; font-size: 0.75rem; }
             .topbar .btn span { display: none; }
         }
 
@@ -349,12 +388,14 @@
         }
     </script>
 
-    <div class="sidebar anim-slide-left">
+    <div class="sidebar anim-slide-left" id="sidebar">
         <div class="brand">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span data-tr="admin_panel">Admin Panel</span>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <svg class="brand-logo" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span class="brand-name" data-tr="admin_panel">Admin Panel</span>
+            </div>
         </div>
         
         <div class="user-panel">
@@ -390,49 +431,49 @@
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                <span data-tr="manage_promos">Manage Promos</span>
+                <span class="nav-text" data-tr="manage_promos">Manage Promos</span>
             </a>
 
             <a href="{{ route('admin.users') }}" class="nav-link {{ request()->routeIs('admin.users') ? 'active' : '' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <span data-tr="active_users">Active Users</span>
+                <span class="nav-text" data-tr="active_users">Active Users</span>
             </a>
 
             <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                 </svg>
-                <span data-tr="manage_reviews">Manage Reviews</span>
+                <span class="nav-text" data-tr="manage_reviews">Manage Reviews</span>
             </a>
 
             <a href="{{ route('admin.announcements') }}" class="nav-link {{ request()->routeIs('admin.announcements') ? 'active' : '' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                 </svg>
-                <span data-tr="manage_announcements">Announcements</span>
+                <span class="nav-text" data-tr="manage_announcements">Announcements</span>
             </a>
         </nav>
 
         <form action="{{ route('logout') }}" method="POST">
             @csrf
             <button type="submit" class="logout-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" min-width="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                <span data-tr="sign_out">Sign Out</span>
+                <span class="nav-text" data-tr="sign_out">Sign Out</span>
             </button>
         </form>
     </div>
     
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <div class="main-wrapper">
+    <div class="main-wrapper" id="mainWrapper">
         <header class="topbar anim-fade-down">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <button class="mobile-toggle" onclick="toggleSidebar()">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <button class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Menu">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
                 <div class="topbar-title">@yield('title', 'Dashboard')</div>
             </div>
@@ -476,10 +517,32 @@
     </div>
 
     <script>
+        const isMobile = () => window.innerWidth <= 768;
+
         function toggleSidebar() {
-            document.querySelector('.sidebar').classList.toggle('open');
-            document.querySelector('.sidebar-overlay').classList.toggle('open');
+            const sidebar = document.getElementById('sidebar');
+            const wrapper = document.getElementById('mainWrapper');
+            const overlay = document.querySelector('.sidebar-overlay');
+
+            if (isMobile()) {
+                // Mobile: slide in/out
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('open');
+            } else {
+                // Desktop: collapse/expand (minimize/maximize)
+                sidebar.classList.toggle('collapsed');
+                wrapper.classList.toggle('collapsed');
+                localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
+            }
         }
+
+        // Restore desktop collapse state on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!isMobile() && localStorage.getItem('sidebar_collapsed') === 'true') {
+                document.getElementById('sidebar').classList.add('collapsed');
+                document.getElementById('mainWrapper').classList.add('collapsed');
+            }
+        });
 
         function updateThemeIcon() {
             const isDark = document.documentElement.classList.contains('dark-mode');
