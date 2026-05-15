@@ -86,3 +86,75 @@ footer { border-top: 1px solid var(--border-color); padding: 40px; text-align: c
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 .btn-steam-login { background: #171a21; color: #fff; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 12px; text-decoration: none; transition: 0.2s; margin-top: 16px; font-size: 1rem; }
 .btn-steam-login:hover { background: #000; }
+
+/* ============================================
+   MOBILE RESPONSIVENESS (CHECKOUT)
+   ============================================ */
+@media (max-width: 768px) {
+    /* Navbar */
+    .navbar {
+        padding: 12px 16px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .brand { font-size: 1.25rem; }
+    
+    /* Container & Layout */
+    .container {
+        padding: 16px 16px;
+        margin: 16px auto;
+        gap: 24px;
+    }
+    
+    .product-img {
+        height: 250px;
+    }
+    
+    .desc-box {
+        padding: 20px;
+    }
+    
+    .order-card {
+        padding: 24px 20px;
+    }
+    
+    .product-title {
+        font-size: 1.4rem;
+    }
+    
+    .product-price {
+        font-size: 1.6rem;
+    }
+    
+    /* Control Row (Kuantitas & Promo) */
+    .control-row {
+        grid-template-columns: 1fr; /* Jadi bersusun ke bawah */
+        gap: 12px;
+    }
+    
+    /* Payment Method Grid */
+    .pm-grid {
+        flex-direction: column; /* Berbaris ke bawah agar tombol tidak terlalu kecil */
+        gap: 10px;
+    }
+    
+    .pm-item {
+        padding: 14px;
+        font-size: 0.95rem;
+    }
+    
+    /* Tombol Bayar */
+    .btn-pay {
+        padding: 16px;
+        font-size: 1rem;
+        margin-top: 24px;
+    }
+    
+    /* Modals */
+    .modal-box {
+        width: 95%;
+        padding: 24px;
+    }
+}
