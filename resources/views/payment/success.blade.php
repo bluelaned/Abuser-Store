@@ -190,30 +190,31 @@
 
         /* ─── PRINT / PDF STYLES ─── */
         @media print {
-            @page { margin: 20mm; size: A4; }
-            body { background:#fff; color:#000; padding:0; }
-            .navbar, .action-row { display:none !important; }
-            .invoice-wrap { max-width:100%; }
-            .success-header { background:#f0fdf4 !important; border-color:#bbf7d0 !important; padding:30px !important; }
-            .check-circle { background:#dcfce7 !important; border-color:#22c55e !important; }
-            .success-text h1 { color:#000 !important; }
-            .success-text p  { color:#555 !important; }
-            .invoice-card { border:1px solid #e5e7eb !important; padding:0 30px 30px !important; }
-            .divider, .divider-dashed { background:#e5e7eb !important; }
-            .invoice-meta-left .label, .invoice-meta-right .label,
-            .item-table thead th, .total-row .t-label,
-            .info-block .info-title, .info-row .i-label { color:#6b7280 !important; }
-            .invoice-meta-left .value { color:#0072ff !important; }
-            .invoice-meta-right .value, .item-table .item-name,
-            .total-row .t-value, .info-row .i-value, .item-table .item-price { color:#000 !important; }
-            .item-table tbody tr td { border-top-color:#e5e7eb !important; }
-            .item-table .item-sub, .item-table .item-qty { color:#6b7280 !important; }
-            .totals-block .total-row.grand .t-value { color:#0072ff !important; }
-            .totals-block .total-row.grand { border-top-color:#e5e7eb !important; }
-            .badge-paid { background:#dcfce7 !important; border-color:#86efac !important; color:#16a34a !important; }
-            .badge-paid::before { background:#16a34a !important; animation:none !important; }
-            .info-block { background:#f9fafb !important; border-color:#e5e7eb !important; }
-            .invoice-footer { color:#9ca3af !important; }
+            @page { margin: 10mm; size: A4; }
+            body { background:#fff !important; color:#000 !important; padding:0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .navbar, .action-row, .success-header { display:none !important; }
+            .invoice-wrap { max-width:100%; margin: 0; padding: 0; background: #fff !important; }
+            .invoice-card { border:none !important; padding:0 !important; background: #fff !important; box-shadow: none !important; }
+            .invoice-banner { display: block !important; width: 100%; height: auto; margin-bottom: 15px; }
+            .divider, .divider-dashed { background:#ddd !important; margin: 15px 0 !important; height: 1px !important; }
+            .invoice-meta { padding-top: 0; gap: 10px; }
+            .invoice-meta-left .label, .invoice-meta-right .label, .item-table thead th, .total-row .t-label, .info-block .info-title, .info-row .i-label { color:#555 !important; }
+            .invoice-meta-left .value { color:#000 !important; font-size: 1.4rem; }
+            .invoice-meta-right .value, .item-table .item-name, .total-row .t-value, .info-row .i-value, .item-table .item-price { color:#000 !important; }
+            .item-table tbody tr td { border-top-color:#ddd !important; padding: 8px 0 !important; }
+            .item-table .item-sub, .item-table .item-qty { color:#555 !important; }
+            .totals-block .total-row.grand .t-value { color:#000 !important; font-size: 1.4rem; }
+            .totals-block .total-row.grand { border-top-color:#ddd !important; padding-top: 8px !important; margin-top: 4px !important; }
+            .badge-paid { background:transparent !important; border:2px solid #16a34a !important; color:#16a34a !important; padding: 4px 8px !important; font-size: 0.85rem !important; font-weight: 800 !important; }
+            .badge-paid::before { display: none; }
+            .info-block { background:transparent !important; border:1px solid #ddd !important; border-radius: 4px !important; padding: 12px !important; }
+            .info-grid { gap: 15px !important; }
+            .invoice-footer { color:#555 !important; border-top: 1px solid #ddd !important; margin-top: 20px !important; padding-top: 10px !important; font-weight: normal !important; background: #fff !important; }
+            
+            /* Redeem Codes */
+            .redeem-box { background: transparent !important; border: 1px dashed #aaa !important; }
+            .redeem-title { color: #555 !important; }
+            .redeem-code { color: #000 !important; font-size: 1.25rem !important; }
         }
 
         @media (max-width:600px) {
@@ -249,6 +250,7 @@
         </div>
 
         {{-- ── INVOICE BODY ── --}}
+        <img src="{{ asset('images/custom_banner_2.png') }}" class="invoice-banner" style="display: none; width: 100%; border-radius: 0; margin-bottom: 15px;" alt="Invoice Banner">
         <div class="invoice-card">
 
             {{-- Meta --}}
@@ -285,10 +287,10 @@
                             <div class="item-sub">{{ $order['payment_method'] ?? 'Online Payment' }}</div>
                             
                             @if(!empty($order['vouchers']))
-                            <div style="margin-top: 12px; background: rgba(0, 198, 255, 0.1); border: 1px dashed var(--primary); padding: 10px 14px; border-radius: 8px;">
-                                <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">🎟 Your Redeem Code(s):</div>
+                            <div class="redeem-box" style="margin-top: 12px; background: rgba(0, 198, 255, 0.1); border: 1px dashed var(--primary); padding: 10px 14px; border-radius: 8px;">
+                                <div class="redeem-title" style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">🎟 Your Redeem Code(s):</div>
                                 @foreach($order['vouchers'] as $vc)
-                                    <div style="font-family: monospace; font-size: 1.1rem; color: #fff; font-weight: 700; letter-spacing: 1px; user-select: all;">{{ $vc }}</div>
+                                    <div class="redeem-code" style="font-family: monospace; font-size: 1.1rem; color: #fff; font-weight: 700; letter-spacing: 1px; user-select: all;">{{ $vc }}</div>
                                 @endforeach
                             </div>
                             @endif
