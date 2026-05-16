@@ -17,6 +17,14 @@ class CallbackController extends Controller
         try {
             $notif = new \Midtrans\Notification();
             
+            // 0. SIGNATURE VALIDATION (Mencegah Bypass Pembayaran)
+            $serverKey = env('MIDTRANS_SERVER_KEY');
+            $expectedSignature = hash('sha512', $notif->order_id . $notif->status_code . $notif->gross_amount . $serverKey);
+            if ($expectedSignature !== $notif->signature_key) {
+                \Log::critical('MIDTRANS SIGNATURE MISMATCH (POTENSI FRAUD)', ['order_id' => $notif->order_id]);
+                return response()->json(['message' => 'Invalid Signature'], 403);
+            }
+
             $transaction = $notif->transaction_status;
             $type = $notif->payment_type;
             $order_id = $notif->order_id;

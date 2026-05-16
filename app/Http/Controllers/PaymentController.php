@@ -278,7 +278,7 @@ class PaymentController extends Controller
                 'original_price' => (int) round($originalUnitPriceUSD * $quantity * 100),
                 'promo_code'     => $promoCode,
                 'customer_email' => $email,
-                'status'         => 'PAID',   // Stripe sudah konfirmasi bayar di success_url
+                'status'         => 'UNPAID',
                 'payment_method' => 'STRIPE',
                 'checkout_url'   => $session->url,
             ]);
@@ -355,14 +355,22 @@ class PaymentController extends Controller
         if (isset($order['order_id'])) {
             $trx = \App\Models\Transaction::where('reference', $order['order_id'])->first();
             if ($trx) {
-                // Ambil info kartu dari Stripe jika session_id tersedia
-                if (request()->has('session_id') && strtoupper($trx->payment_method) === 'STRIPE') {
+                // Verifikasi status pembayaran Stripe
+                if (strtoupper($trx->payment_method) === 'STRIPE') {
+                    if (!request()->has('session_id')) {
+                        return redirect('/')->with('error', 'Sesi pembayaran Stripe tidak valid.');
+                    }
                     try {
                         \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
                         $sessionStripe = \Stripe\Checkout\Session::retrieve([
                             'id' => request('session_id'),
                             'expand' => ['payment_intent.payment_method']
                         ]);
+
+                        // PROTEKSI UTAMA: Pastikan benar-benar sudah dibayar
+                        if ($sessionStripe->payment_status !== 'paid') {
+                            return redirect('/')->with('error', 'Pembayaran Stripe belum diselesaikan atau gagal.');
+                        }
 
                         if ($sessionStripe && $sessionStripe->payment_intent && $sessionStripe->payment_intent->payment_method) {
                             $pm = $sessionStripe->payment_intent->payment_method;
@@ -377,6 +385,7 @@ class PaymentController extends Controller
                         }
                     } catch (\Exception $e) {
                         \Log::error('Failed to retrieve Stripe session details: ' . $e->getMessage());
+                        return redirect('/')->with('error', 'Terjadi kesalahan saat memverifikasi pembayaran Stripe.');
                     }
                 }
 
