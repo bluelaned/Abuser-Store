@@ -984,8 +984,8 @@
             <div class="ann-footer" id="annPopupNav" style="display:none;">
                 <div class="ann-dots-row" id="annDots"></div>
                 <div class="ann-btns-row">
-                    <button class="ann-btn-ghost" id="annPrevBtn" onclick="showAnn(currentAnnIdx - 1)">← Prev</button>
-                    <button class="ann-btn-primary" id="annNextBtn" onclick="showAnn(currentAnnIdx + 1)">Next →</button>
+                    <button class="ann-btn-ghost" id="annPrevBtn">← Prev</button>
+                    <button class="ann-btn-primary" id="annNextBtn">Next →</button>
                 </div>
             </div>
 
@@ -1083,7 +1083,11 @@
             // Multi nav buttons
             const prevBtn = document.getElementById('annPrevBtn');
             const nextBtn = document.getElementById('annNextBtn');
-            if (prevBtn) { prevBtn.disabled = idx === 0; prevBtn.style.opacity = idx === 0 ? '0.4' : '1'; }
+            if (prevBtn) { 
+                prevBtn.disabled = idx === 0; 
+                prevBtn.style.opacity = idx === 0 ? '0.4' : '1'; 
+                prevBtn.onclick = () => showAnn(currentAnnIdx - 1);
+            }
             if (nextBtn) {
                 if (idx === allAnns.length - 1) {
                     nextBtn.textContent = 'Done ✓';

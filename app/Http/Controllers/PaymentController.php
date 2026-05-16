@@ -41,6 +41,14 @@ class PaymentController extends Controller
         $quantity = (int) $request->quantity;
         if ($quantity < 1) $quantity = 1;
 
+        // CEK KETERSEDIAAN STOK (Mencegah Overselling)
+        $availableStock = \App\Models\VoucherCode::where('variant_id', $variant->id)
+                                                 ->where('status', 'AVAILABLE')
+                                                 ->count();
+        if ($availableStock < $quantity) {
+            return back()->with('error', 'Stok tidak mencukupi! Sisa stok saat ini: ' . $availableStock);
+        }
+
         // Use variant's own currency and price_amount
         $variantCurrency      = strtoupper($variant->currency ?? 'USD');
         $originalUnitAmount   = (float) ($variant->price_amount ?? $variant->price_usd ?? 0);

@@ -20,8 +20,7 @@ Route::view('/privacy', 'privacy')->name('privacy');
 Route::get('/reviews', [App\Http\Controllers\ReviewController::class, 'publicIndex'])->name('reviews.index');
 
 Route::post('/checkout/check-promo', [PaymentController::class, 'checkPromo'])->name('payment.check_promo')->middleware('throttle:15,1');
-Route::post('/checkout/process', [PaymentController::class, 'process'])->name('payment.process');
-Route::post('/payment/stripe', [TransactionController::class, 'stripeProcess'])->name('payment.stripe');
+Route::post('/checkout/process', [PaymentController::class, 'process'])->name('payment.process')->middleware('auth');
 
 Route::get('/payment/success', [PaymentController::class, 'success'])->name('payment.success');
 Route::get('/invoice/{reference}', [TransactionController::class, 'show'])->name('transaction.show');
