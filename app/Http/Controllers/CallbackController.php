@@ -105,9 +105,6 @@ class CallbackController extends Controller
                             
                             \App\Http\Controllers\PaymentController::sendDiscordNotification($orderData);
                         }
-                    }
-                    
-                    
                 } else if ($transaction == 'pending') {
                     $trx->update(['status' => 'UNPAID']);
                 } else if ($transaction == 'deny') {

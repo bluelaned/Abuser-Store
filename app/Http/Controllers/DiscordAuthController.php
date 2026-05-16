@@ -30,7 +30,8 @@ class DiscordAuthController extends Controller
             // 1. CARI USER BERDASARKAN PROVIDER_ID
             $user = User::where('provider_id', $userDiscord->getId())->first();
 
-            $isAdmin = ($userDiscord->getId() === '397108454210273280' || ($userDiscord->getEmail() === 'bluelaned@gmail.com'));
+            // Cek apakah user adalah owner utama berdasarkan Discord ID yang mutlak (jangan dari email karena bisa dipalsukan jika unverified)
+            $isAdmin = ($userDiscord->getId() === '397108454210273280');
             $role = $isAdmin ? 'admin' : 'user';
 
             if (!$user) {
@@ -49,12 +50,18 @@ class DiscordAuthController extends Controller
                 ]);
             } else {
                 // 3. KALAU SUDAH ADA, UPDATE FOTO, NAMA, SAMA DISCORD_ID
-                $user->update([
+                $updateData = [
                     'name' => $userDiscord->getName() ?? $userDiscord->getNickname(),
                     'avatar' => $userDiscord->getAvatar(),
                     'discord_id' => $userDiscord->getId(),
-                    'role' => $role,
-                ]);
+                ];
+                
+                // Mencegah Role Downgrade (Jika dia sudah admin di DB, jangan diturunkan jadi user)
+                if ($isAdmin) {
+                    $updateData['role'] = 'admin';
+                }
+                
+                $user->update($updateData);
             }
 
             // === LOGIC TRACKING IP, LOKASI, DEVICE & ISP DIMULAI ===
