@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/animations.css') }}">
     <link rel="stylesheet" href="{{ asset('css/index.css') }}">
-    
+
     <style>
         /* === FLOATING DISCORD BUTTON CSS === */
         .discord-float {
@@ -61,7 +61,7 @@
             border: 1px solid rgba(88,101,242,0.3);
             pointer-events: none;
         }
-        
+
         /* Segitiga panah tooltip */
         .discord-float::after {
             content: "";
@@ -137,7 +137,7 @@
                 Reviews
             </a>
         </div>
-        
+
         <div style="display: flex; gap: 20px; align-items: center;">
             @auth
                 <!-- USER DROPDOWN -->
@@ -154,7 +154,7 @@
                         </div>
                         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </div>
-                    
+
                     <div class="user-dropdown-menu">
                         <div class="dropdown-header">
                             <img src="{{ Auth::user()->avatar }}" alt="Avatar">
@@ -165,6 +165,8 @@
                         </div>
                         <div class="dropdown-links">
                             <a href="{{ route('profile.show', ['name' => strtolower(Auth::user()->name), 'id' => Auth::id()]) }}" class="dropdown-link">Your profile</a>
+                            <a href="{{ route('profile.show', ['name' => strtolower(Auth::user()->name), 'id' => Auth::id()]) }}#transactions" class="dropdown-link">My Orders</a>
+                            <a href="{{ route('wishlist.index') }}" class="dropdown-link">Wishlist ❤️</a>
                             @if(Auth::user()->role === 'admin')
                                 <a href="{{ route('admin.dashboard') }}" class="dropdown-link" style="color: #00aaff;">Admin Panel</a>
                             @endif
@@ -226,6 +228,44 @@
 
     <div class="container">
 
+        {{-- === SEARCH & FILTER BAR === --}}
+        <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;align-items:center;" id="filterBar">
+            <form method="GET" action="/" style="display:flex;gap:10px;flex:1;flex-wrap:wrap;align-items:center;">
+                {{-- Search --}}
+                <div style="position:relative;flex:1;min-width:200px;">
+                    <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" name="search" id="searchInput" value="{{ request('search') }}" placeholder="Search products..." style="width:100%;padding:10px 12px 10px 36px;background:var(--bg-surface,rgba(255,255,255,0.05));border:1px solid var(--border-color);border-radius:10px;color:var(--text-main);font-size:0.9rem;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
+                </div>
+                {{-- Category filter --}}
+                @if(isset($categories) && $categories->count() > 0)
+                <select name="category" onchange="this.form.submit()" style="padding:10px 14px;background:var(--bg-surface,rgba(255,255,255,0.05));border:1px solid var(--border-color);border-radius:10px;color:var(--text-main);font-size:0.9rem;outline:none;cursor:pointer;min-width:140px;">
+                    <option value="">All Categories</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                    @endforeach
+                </select>
+                @endif
+                {{-- Submit / Clear --}}
+                @if(request('search') || request('category'))
+                    <a href="/" style="padding:10px 16px;border:1px solid var(--border-color);border-radius:10px;color:var(--text-muted);font-size:0.82rem;text-decoration:none;display:flex;align-items:center;gap:5px;white-space:nowrap;">✕ Clear</a>
+                @endif
+            </form>
+            @auth
+            <a href="{{ route('wishlist.index') }}" style="padding:10px 16px;border:1px solid var(--border-color);border-radius:10px;color:var(--text-muted);font-size:0.82rem;text-decoration:none;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:0.2s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-muted)'">
+                ❤️ Wishlist
+            </a>
+            @endauth
+        </div>
+
+        {{-- Search result info --}}
+        @if(request('search') || request('category'))
+        <div style="margin-bottom:16px;font-size:0.85rem;color:var(--text-muted);">
+            Found <strong style="color:var(--text-main);">{{ $products->count() }}</strong> product(s)
+            @if(request('search')) for "<strong style="color:var(--text-main);">{{ request('search') }}</strong>"@endif
+            @if(request('category')) in category "<strong style="color:var(--primary);">{{ request('category') }}</strong>"@endif
+        </div>
+        @endif
+
         {{-- === REAL PRODUCT GRID === --}}
         <div class="grid" id="productGrid">
             @forelse($products as $product)
@@ -234,17 +274,24 @@
                     $minUsd = $product->variants->min('price_usd') ?? 0;
                 @endphp
 
-                <div class="card reveal">
+                <div class="card reveal" style="position:relative;">
                     <div class="card-inner">
                         @if($product->image)
                             <img src="{{ asset('storage/' . $product->image) }}" class="card-img" alt="{{ $product->name }}">
                         @else
                             <div class="card-img" style="display:flex; align-items:center; justify-content:center; color:#555; font-weight: bold;">NO IMAGE</div>
                         @endif
-                        
+
+                        @auth
+                        <button
+                            onclick="toggleWishlist({{ $product->id }}, this)"
+                            class="wishlist-btn-{{ $product->id }}"
+                            style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.5);border:none;color:white;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;transition:0.2s;backdrop-filter:blur(4px);"
+                            title="Add to wishlist">❤️</button>
+                        @endauth
                         <div class="card-body">
                             <div class="price-tag">
-                                <span class="starts-text">Starts from</span> 
+                                <span class="starts-text">Starts from</span>
                                 <span class="dynamic-price">
                                     $ {{ number_format($minUsd, 2) }}
                                 </span>
@@ -254,7 +301,7 @@
                                 <h3 class="product-name" title="{{ $product->name }}">{{ $product->name }}</h3>
                                 <div class="type-label">{{ $product->type }}</div>
                             </div>
-                            
+
                             <button onclick="goToCheckout('{{ $product->id }}')" class="btn-buy">BUY NOW</button>
                         </div>
                     </div>
@@ -408,6 +455,38 @@
             document.documentElement.classList.toggle('dark-mode');
             localStorage.setItem('abuser_theme', document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light');
             updateThemeIcon();
+        }
+
+        // === WISHLIST ===
+        const isLoggedInUser = {{ Auth::check() ? 'true' : 'false' }};
+        const userWishlist = {!! Auth::check() ? json_encode(auth()->user()->wishlists()->pluck('product_id')) : '[]' !!};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mark already-wishlisted items
+            userWishlist.forEach(pid => {
+                const btn = document.querySelector('.wishlist-btn-' + pid);
+                if (btn) { btn.style.background = 'rgba(239,68,68,0.8)'; btn.setAttribute('data-in-wishlist', '1'); }
+            });
+        });
+
+        async function toggleWishlist(productId, btn) {
+            if (!isLoggedInUser) { window.location.href = '{{ route('auth.discord') }}'; return; }
+            try {
+                const res = await fetch(`/wishlist/${productId}/toggle`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.in_wishlist) {
+                    btn.style.background = 'rgba(239,68,68,0.8)';
+                    btn.setAttribute('data-in-wishlist', '1');
+                    btn.title = 'Remove from wishlist';
+                } else {
+                    btn.style.background = 'rgba(0,0,0,0.5)';
+                    btn.removeAttribute('data-in-wishlist');
+                    btn.title = 'Add to wishlist';
+                }
+            } catch(e) { console.error(e); }
         }
 
         // === ON DOM READY ===
@@ -694,7 +773,7 @@
         function showBell() {
             const btn = document.getElementById('annBellBtn');
             if (btn) btn.style.display = 'flex';
-            
+
             const dot = document.getElementById('annBellDot');
             if (dot) {
                 // Show dot only if there are unread announcements
@@ -743,9 +822,9 @@
             // Multi nav buttons
             const prevBtn = document.getElementById('annPrevBtn');
             const nextBtn = document.getElementById('annNextBtn');
-            if (prevBtn) { 
-                prevBtn.disabled = idx === 0; 
-                prevBtn.style.opacity = idx === 0 ? '0.4' : '1'; 
+            if (prevBtn) {
+                prevBtn.disabled = idx === 0;
+                prevBtn.style.opacity = idx === 0 ? '0.4' : '1';
                 prevBtn.onclick = () => showAnn(currentAnnIdx - 1);
             }
             if (nextBtn) {
@@ -809,4 +888,4 @@
     })();
     </script>
 </body>
-</html>
+</html>

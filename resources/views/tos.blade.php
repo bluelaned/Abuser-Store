@@ -21,27 +21,39 @@
 
     <div class="page-content">
         <a href="/" class="back-link">← Back to Home</a>
+        @if(!empty($page) && !empty($page->content))
+            <h1>{{ $page->title }}</h1>
+            {!! $page->content !!}
+        @else
         <h1>Terms of Service</h1>
         <p><em>Last updated: {{ date('F j, Y') }}</em></p>
 
         <h2>1. Acceptance of Terms</h2>
         <p>By accessing and using ABUSER STORE, you accept and agree to be bound by the terms and provision of this agreement. In addition, when using these particular services, you shall be subject to any posted guidelines or rules applicable to such services.</p>
 
-        <h2>2. Digital Products</h2>
-        <p>All sales of digital products are final. Because digital goods cannot be returned, we do not offer refunds once the product has been delivered to you via email or Discord.</p>
+        <h2>2. Digital Products & Refund Policy</h2>
+        <p>All sales of digital products are final. Because digital goods cannot be returned, we generally do not offer refunds once the product has been delivered to you via email, direct message, or Discord.</p>
         <ul>
             <li>You are responsible for ensuring that you are purchasing the correct product.</li>
             <li>Any issues with the product must be reported to our support team within 24 hours of purchase.</li>
         </ul>
+        <div style="background: rgba(245,158,11,0.08); padding: 16px 20px; border-left: 4px solid #f59e0b; border-radius: 4px; margin-top: 16px;">
+            <strong>⚠️ IMPORTANT: Pricing and Availability</strong><br>
+            Prices and availability from the official product supplier are subject to change without notice. If there is a price increase from the central server while the order is being processed, we reserve the right to cancel the order and issue a <strong>100% refund</strong> to the buyer.
+        </div>
 
-        <h2>3. Promo Codes and Vouchers</h2>
+        <h2>3. Delivery Time</h2>
+        <p>While most digital products are delivered instantly via our automated system (e.g. Serial Keys), some products may require manual processing (e.g. Gifts). Please allow up to 24 hours for manual deliveries before contacting support.</p>
+
+        <h2>4. Promo Codes and Vouchers</h2>
         <p>Promo codes are limited to one use per user account unless explicitly stated otherwise. We reserve the right to cancel any transaction that abuses the promo code system or circumvents our limitations.</p>
 
-        <h2>4. User Conduct</h2>
-        <p>You agree to use our services only for lawful purposes. You must not use our services in any way that causes, or may cause, damage to the website or impairment of the availability or accessibility of the store.</p>
+        <h2>5. User Conduct & Account Bans</h2>
+        <p>You agree to use our services only for lawful purposes. We maintain a zero-tolerance policy against chargebacks, fraud, or abuse. Initiating a fraudulent chargeback will result in a permanent ban from our services and your information being shared with our partners.</p>
 
-        <h2>5. Modifications</h2>
+        <h2>6. Modifications</h2>
         <p>We reserve the right to modify these terms at any time. Your continued use of the site following any such modification constitutes your agreement to follow and be bound by the terms as modified.</p>
+        @endif
     </div>
 
     <footer>

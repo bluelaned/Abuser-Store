@@ -210,7 +210,7 @@
             .info-block { background:transparent !important; border:1px solid #ddd !important; border-radius: 4px !important; padding: 12px !important; }
             .info-grid { gap: 15px !important; }
             .invoice-footer { color:#555 !important; border-top: 1px solid #ddd !important; margin-top: 20px !important; padding-top: 10px !important; font-weight: normal !important; background: #fff !important; }
-            
+
             /* Redeem Codes */
             .redeem-box { background: transparent !important; border: 1px dashed #aaa !important; }
             .redeem-title { color: #555 !important; }
@@ -285,7 +285,32 @@
                         <td>
                             <div class="item-name">{{ $order['product_name'] ?? 'Produk ABUSER' }}</div>
                             <div class="item-sub">{{ $order['payment_method'] ?? 'Online Payment' }}</div>
-                            
+
+                            {{-- Crypto pending confirmation state --}}
+                            @if(!empty($order['crypto_pending']))
+                            <div style="background:rgba(247,147,26,0.08); border:1px solid rgba(247,147,26,0.3); border-radius:16px; padding:24px 28px; margin-bottom:24px; text-align:center;">
+                                <div style="font-size:2.5rem; margin-bottom:12px;">⏳</div>
+                                <div style="font-weight:800; font-size:1.1rem; color:#f7931a; margin-bottom:8px;">Awaiting Crypto Confirmation</div>
+                                <div style="font-size:0.875rem; color:var(--text-muted); line-height:1.7; margin-bottom:16px;">
+                                    Your payment is being confirmed on the blockchain.<br>
+                                    This usually takes <strong style="color:var(--text-main);">1–30 minutes</strong> depending on network congestion.<br>
+                                    Voucher codes will be sent to your <strong style="color:#5865F2;">Discord DM</strong> automatically once confirmed.
+                                </div>
+                                <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                                    <a href="{{ route('profile.show', ['name' => strtolower(auth()->user()->name ?? 'user'), 'id' => auth()->id() ?? 0]) }}#transactions"
+                                       style="background:rgba(99,102,241,0.15); color:#6366f1; border:1px solid rgba(99,102,241,0.3); padding:9px 20px; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.85rem;">
+                                        Check My Orders
+                                    </a>
+                                    @if(!empty($order['crypto_order_id']))
+                                    <a href="{{ route('order.status') }}"
+                                       style="background:rgba(247,147,26,0.12); color:#f7931a; border:1px solid rgba(247,147,26,0.3); padding:9px 20px; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.85rem;">
+                                        Track Order Status
+                                    </a>
+                                    @endif
+                                </div>
+                            </div>
+                            @endif
+
                             @if(!empty($order['vouchers']))
                             <div class="redeem-box" style="margin-top: 12px; background: rgba(0, 198, 255, 0.1); border: 1px dashed var(--primary); padding: 10px 14px; border-radius: 8px;">
                                 <div class="redeem-title" style="font-size: 0.75rem; color: var(--primary); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">🎟 Your Redeem Code(s):</div>

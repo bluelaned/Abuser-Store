@@ -99,6 +99,65 @@
             </select>
         </div>
 
+        <div class="form-group">
+            <label class="form-label">Delivery Method</label>
+            <select name="delivery_method" class="form-control" required>
+                <option value="serial" {{ ($product->delivery_method ?? 'serial') == 'serial' ? 'selected' : '' }}>Voucher / Serial Key</option>
+                <option value="gift" {{ ($product->delivery_method ?? 'serial') == 'gift' ? 'selected' : '' }}>Via Gift to Account</option>
+            </select>
+        </div>
+
+        <!-- ── HARGA & PROFIT ── -->
+        <div style="background:rgba(16,185,129,0.05); padding:24px; border-radius:12px; border:1px solid rgba(16,185,129,0.2); margin-bottom:24px;">
+            <label class="form-label" style="color:#10b981; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                💰 HARGA &amp; PROFIT
+            </label>
+            <div style="display:grid; grid-template-columns:1fr 1fr 0.7fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label class="form-label">Harga Official (Cost)</label>
+                    <input type="number" name="official_price" id="editOfficialPrice" class="form-control"
+                           value="{{ $product->official_price }}" step="0.01" min="0" placeholder="e.g: 10.00"
+                           oninput="calcProfitEdit()">
+                    <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Harga dari supplier / official</span>
+                </div>
+                <div>
+                    <label class="form-label">Harga Jual (Selling)</label>
+                    <input type="number" name="selling_price" id="editSellingPrice" class="form-control"
+                           value="{{ $product->selling_price }}" step="0.01" min="0" placeholder="e.g: 13.00"
+                           oninput="calcProfitEdit()">
+                    <span style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; display:block;">Harga yang ditampilkan ke user</span>
+                </div>
+                <div>
+                    <label class="form-label">Currency</label>
+                    <select name="profit_currency" id="editProfitCurrency" class="form-control" onchange="calcProfitEdit()">
+                        @foreach(['USD'=>'USD ($)','IDR'=>'IDR (Rp)','EUR'=>'EUR (€)','GBP'=>'GBP (£)','MYR'=>'MYR (RM)','SGD'=>'SGD (S$)','AUD'=>'AUD (A$)'] as $code => $label)
+                            <option value="{{ $code }}" {{ ($product->profit_currency ?? 'USD') === $code ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <!-- Profit Preview -->
+            <div id="editProfitPreview" style="padding:16px; border-radius:12px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); display:flex; gap:24px; align-items:center;">
+                <div style="text-align:center;">
+                    <div style="font-size:.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Cost</div>
+                    <div id="eppCost" style="font-size:1.1rem; font-weight:800; color:var(--text-main);">{{ $product->official_price ? '$'.number_format($product->official_price,2) : '—' }}</div>
+                </div>
+                <div style="font-size:1.4rem; color:var(--text-muted);">→</div>
+                <div style="text-align:center;">
+                    <div style="font-size:.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Selling</div>
+                    <div id="eppSell" style="font-size:1.1rem; font-weight:800; color:var(--primary);">{{ $product->selling_price ? '$'.number_format($product->selling_price,2) : '—' }}</div>
+                </div>
+                <div style="flex:1;"></div>
+                <div style="text-align:right;">
+                    <div style="font-size:.72rem; font-weight:700; color:#10b981; text-transform:uppercase;">Profit Anda</div>
+                    @php $editProfit = max(0, ($product->selling_price ?? 0) - ($product->official_price ?? 0)); $editPct = ($product->official_price ?? 0) > 0 ? round(($editProfit/($product->official_price))*100,1) : 0; @endphp
+                    <div id="eppProfit" style="font-size:1.5rem; font-weight:900; color:#10b981;">+{{ number_format($editProfit, 2) }}</div>
+                    <div id="eppPct" style="font-size:.8rem; font-weight:700; background:rgba(16,185,129,0.2); color:#10b981; padding:2px 10px; border-radius:20px; display:inline-block; margin-top:4px;">{{ $editPct }}%</div>
+                </div>
+            </div>
+        </div>
+
         <div class="form-group" style="margin-bottom: 24px;">
             <label class="form-label">Deskripsi Produk</label>
             <textarea name="description" id="editor">{{ $product->description }}</textarea>
@@ -164,6 +223,23 @@
 
     function removeVariant(btn) { 
         btn.parentElement.remove(); 
+    }
+
+    const EDIT_SYM = { USD:'$', IDR:'Rp ', EUR:'€', GBP:'£', MYR:'RM ', SGD:'S$', THB:'฿', JPY:'¥', AUD:'A$' };
+
+    function calcProfitEdit() {
+        const cost = parseFloat(document.getElementById('editOfficialPrice').value) || 0;
+        const sell = parseFloat(document.getElementById('editSellingPrice').value)  || 0;
+        const cur  = document.getElementById('editProfitCurrency').value || 'USD';
+        const sym  = EDIT_SYM[cur] || '$';
+        const dec  = (cur === 'IDR' || cur === 'JPY') ? 0 : 2;
+        const profit = Math.max(0, sell - cost);
+        const pct    = cost > 0 ? ((profit / cost) * 100).toFixed(1) : '0';
+        document.getElementById('eppCost').textContent   = sym + cost.toFixed(dec);
+        document.getElementById('eppSell').textContent   = sym + sell.toFixed(dec);
+        document.getElementById('eppProfit').textContent = '+' + sym + profit.toFixed(dec);
+        document.getElementById('eppPct').textContent    = pct + '%';
+        document.getElementById('eppProfit').style.color = profit >= 0 ? '#10b981' : '#ef4444';
     }
 </script>
 @endsection

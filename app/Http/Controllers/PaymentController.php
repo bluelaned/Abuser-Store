@@ -21,17 +21,17 @@ class PaymentController extends Controller
         // 0. Rate Limiting (Prevent Spam & Double Click)
         $userId = auth()->id() ?? request()->ip();
         $rateLimitKey = 'checkout-spam-limit:' . $userId;
-        
+
         if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
             \Log::warning('Checkout Spam Detected for User/IP: ' . $userId);
             return back()->with('error', 'Harap tunggu beberapa detik sebelum mencoba checkout lagi (Mencegah spam).');
         }
-        
+
         \Illuminate\Support\Facades\RateLimiter::hit($rateLimitKey, 10); // Block for 10 seconds
 
         // 1. Ambil Data
         $variant = Variant::with('product')->find($request->variant_id);
-        
+
         if (!$variant) {
             return back()->with('error', 'Produk tidak ditemukan.');
         }
@@ -41,12 +41,19 @@ class PaymentController extends Controller
         $quantity = (int) $request->quantity;
         if ($quantity < 1) $quantity = 1;
 
-        // CEK KETERSEDIAAN STOK (Mencegah Overselling)
-        $availableStock = \App\Models\VoucherCode::where('variant_id', $variant->id)
-                                                 ->where('status', 'AVAILABLE')
-                                                 ->count();
-        if ($availableStock < $quantity) {
-            return back()->with('error', 'Stok tidak mencukupi! Sisa stok saat ini: ' . $availableStock);
+        if ($variant->product->delivery_method === 'gift') {
+            if (empty($request->gift_username)) {
+                return back()->with('error', 'Silakan masukkan username target untuk gift.');
+            }
+            $quantity = 1;
+        } else {
+            // CEK KETERSEDIAAN STOK (Mencegah Overselling)
+            $availableStock = \App\Models\VoucherCode::where('variant_id', $variant->id)
+                                                     ->where('status', 'AVAILABLE')
+                                                     ->count();
+            if ($availableStock < $quantity) {
+                return back()->with('error', 'Stok tidak mencukupi! Sisa stok saat ini: ' . $availableStock);
+            }
         }
 
         // Use variant's own currency and price_amount
@@ -111,6 +118,14 @@ class PaymentController extends Controller
         $finalTotalUSD    = max(0.01, $originalTotalUSD - $discountUSD);
 
         // 4. Route to payment gateway
+        if (strtolower($method) === 'paypal') {
+            return $this->processPaypal($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $variantCurrency, $email, $promoCode);
+        }
+
+        if (strtolower($method) === 'crypto') {
+            return $this->processCrypto($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $email, $promoCode);
+        }
+
         if (strtolower($method) === 'stripe') {
             return $this->processStripe($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $variantCurrency, $email, $promoCode, $request->promo_code);
         }
@@ -164,8 +179,8 @@ class PaymentController extends Controller
 
         try {
             $snapToken = Snap::getSnapToken($params);
-            $baseUrl   = Config::$isProduction 
-                ? 'https://app.midtrans.com/snap/v2/vtweb/' 
+            $baseUrl   = Config::$isProduction
+                ? 'https://app.midtrans.com/snap/v2/vtweb/'
                 : 'https://app.sandbox.midtrans.com/snap/v2/vtweb/';
 
             $checkoutUrl = $baseUrl . $snapToken;
@@ -181,10 +196,23 @@ class PaymentController extends Controller
                 'price'          => $grossAmount,
                 'original_price' => $originalUnitPriceIDR * $quantity,
                 'promo_code'     => $promoCode,
+                'gift_username'  => $variant->product->delivery_method === 'gift' ? request('gift_username') : null,
                 'customer_email' => $email,
                 'status'         => 'UNPAID',
                 'payment_method' => 'MIDTRANS',
                 'checkout_url'   => $checkoutUrl,
+            ]);
+
+            self::sendAdminChannelNotification([
+                'order_id'       => $orderId,
+                'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+                'quantity'       => $quantity,
+                'total'          => $grossAmount,
+                'currency'       => 'IDR',
+                'payment_method' => 'Midtrans',
+                'customer_email' => $email,
+                'discord_name'   => auth()->user()->name ?? null,
+                'discord_id'     => auth()->user()->discord_id ?? null,
             ]);
 
             // Simpan data ke session untuk halaman sukses
@@ -214,7 +242,7 @@ class PaymentController extends Controller
     private function processStripe($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $currency, $email, $promoCode, $rawPromo)
     {
         \Log::info("--- ENTERING PROCESS STRIPE ---");
-        
+
         // 1. Cek IP (Anti VPN/Proxy/RDP)
         $ip = request()->ip();
         if ($ip !== '127.0.0.1' && $ip !== '::1') {
@@ -236,8 +264,8 @@ class PaymentController extends Controller
             Stripe::setApiKey(env('STRIPE_SECRET'));
 
             $orderId = 'INV-' . time() . '-' . rand(100, 999);
-            
-            // Stripe line_items doesn't easily allow negative items without coupons. 
+
+            // Stripe line_items doesn't easily allow negative items without coupons.
             // So we divide the final total by quantity to get the new unit amount.
             $unitAmountCents = (int) round(($finalTotalUSD / $quantity) * 100);
             $totalCents = $unitAmountCents * $quantity;
@@ -277,10 +305,23 @@ class PaymentController extends Controller
                 'price'          => $totalCents,  // simpan dalam cents USD
                 'original_price' => (int) round($originalUnitPriceUSD * $quantity * 100),
                 'promo_code'     => $promoCode,
+                'gift_username'  => $variant->product->delivery_method === 'gift' ? request('gift_username') : null,
                 'customer_email' => $email,
                 'status'         => 'UNPAID',
                 'payment_method' => 'STRIPE',
                 'checkout_url'   => $session->url,
+            ]);
+
+            self::sendAdminChannelNotification([
+                'order_id'       => $orderId,
+                'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+                'quantity'       => $quantity,
+                'total'          => $totalCents / 100,
+                'currency'       => strtoupper($currency),
+                'payment_method' => 'Stripe',
+                'customer_email' => $email,
+                'discord_name'   => auth()->user()->name ?? null,
+                'discord_id'     => auth()->user()->discord_id ?? null,
             ]);
 
             // Simpan data ke session untuk halaman sukses
@@ -313,6 +354,341 @@ class PaymentController extends Controller
     }
 
     // ─────────────────────────────────────────────────────
+    private function processPaypal($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $currency, $email, $promoCode)
+    {
+        $clientId     = env('PAYPAL_CLIENT_ID');
+        $clientSecret = env('PAYPAL_CLIENT_SECRET');
+        $baseUrl      = env('PAYPAL_MODE', 'sandbox') === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+
+        if (!$clientId || !$clientSecret) {
+            return back()->with('error', 'PayPal is not configured. Please use another payment method.');
+        }
+
+        // Get access token
+        $tokenRes = Http::withBasicAuth($clientId, $clientSecret)
+            ->asForm()
+            ->post("{$baseUrl}/v1/oauth2/token", ['grant_type' => 'client_credentials']);
+
+        if (!$tokenRes->successful()) {
+            \Log::error('PayPal token error', ['response' => $tokenRes->json()]);
+            return back()->with('error', 'PayPal connection failed. Please try another payment method.');
+        }
+
+        $accessToken = $tokenRes->json('access_token');
+        $orderId     = 'INV-' . time() . '-' . rand(100, 999);
+
+        $orderRes = Http::withToken($accessToken)
+            ->post("{$baseUrl}/v2/checkout/orders", [
+                'intent' => 'CAPTURE',
+                'purchase_units' => [[
+                    'reference_id' => $orderId,
+                    'amount'       => [
+                        'currency_code' => 'USD',
+                        'value'         => number_format($finalTotalUSD, 2, '.', ''),
+                    ],
+                    'description' => substr($variant->product->name . ' (' . $variant->duration . ')', 0, 127),
+                ]],
+                'application_context' => [
+                    'return_url'          => route('payment.paypal.return'),
+                    'cancel_url'          => url('/'),
+                    'brand_name'          => 'ABUSER STORE',
+                    'user_action'         => 'PAY_NOW',
+                    'shipping_preference' => 'NO_SHIPPING',
+                ],
+            ]);
+
+        if (!$orderRes->successful()) {
+            \Log::error('PayPal order creation failed', ['response' => $orderRes->json()]);
+            return back()->with('error', 'PayPal order creation failed. Please try again.');
+        }
+
+        $paypalData = $orderRes->json();
+        $paypalId   = $paypalData['id'];
+        $approveUrl = collect($paypalData['links'])->firstWhere('rel', 'approve')['href'] ?? null;
+
+        if (!$approveUrl) {
+            return back()->with('error', 'PayPal approval URL not found.');
+        }
+
+        $totalCents = (int) round($finalTotalUSD * 100);
+
+        Transaction::create([
+            'user_id'        => auth()->id(),
+            'reference'      => $orderId,
+            'merchant_ref'   => $paypalId,
+            'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+            'variant_id'     => $variant->id,
+            'quantity'       => $quantity,
+            'price'          => $totalCents,
+            'original_price' => (int) round($originalUnitPriceUSD * $quantity * 100),
+            'promo_code'     => $promoCode,
+            'gift_username'  => $variant->product->delivery_method === 'gift' ? request('gift_username') : null,
+            'customer_email' => $email,
+            'status'         => 'UNPAID',
+            'payment_method' => 'PAYPAL',
+            'checkout_url'   => $approveUrl,
+        ]);
+
+        $this->storeOrderSession([
+            'order_id'       => $orderId,
+            'variant_id'     => $variant->id,
+            'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+            'quantity'       => $quantity,
+            'unit_price'     => $originalUnitPriceUSD,
+            'discount'       => $discountUSD,
+            'total'          => $totalCents / 100,
+            'currency'       => 'USD',
+            'payment_method' => 'PayPal (Goods & Services)',
+            'customer_email' => $email,
+            'promo_code'     => $promoCode,
+            'paid_at'        => now()->format('d M Y, H:i'),
+        ]);
+
+        self::sendAdminChannelNotification([
+            'order_id'       => $orderId,
+            'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+            'quantity'       => $quantity,
+            'total'          => $totalCents / 100,
+            'currency'       => 'USD',
+            'payment_method' => 'PayPal',
+            'customer_email' => $email,
+            'discord_name'   => auth()->user()->name ?? null,
+            'discord_id'     => auth()->user()->discord_id ?? null,
+        ]);
+
+        return redirect($approveUrl);
+    }
+
+    // ─────────────────────────────────────────────────────
+    public function paypalReturn(Request $request)
+    {
+        $paypalOrderId = $request->token;
+
+        if (!$paypalOrderId) {
+            return redirect('/')->with('error', 'PayPal payment was cancelled.');
+        }
+
+        $clientId     = env('PAYPAL_CLIENT_ID');
+        $clientSecret = env('PAYPAL_CLIENT_SECRET');
+        $baseUrl      = env('PAYPAL_MODE', 'sandbox') === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+
+        // Get access token
+        $tokenRes = Http::withBasicAuth($clientId, $clientSecret)
+            ->asForm()
+            ->post("{$baseUrl}/v1/oauth2/token", ['grant_type' => 'client_credentials']);
+
+        if (!$tokenRes->successful()) {
+            return redirect('/')->with('error', 'PayPal verification failed.');
+        }
+
+        $accessToken = $tokenRes->json('access_token');
+
+        // Capture the order
+        $captureRes = Http::withToken($accessToken)
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post("{$baseUrl}/v2/checkout/orders/{$paypalOrderId}/capture", (object)[]);
+
+        if (!$captureRes->successful()) {
+            \Log::error('PayPal capture failed', ['response' => $captureRes->json(), 'paypal_order_id' => $paypalOrderId]);
+            return redirect('/')->with('error', 'PayPal payment capture failed. Contact support with order ID: ' . $paypalOrderId);
+        }
+
+        $captureData = $captureRes->json();
+
+        if (($captureData['status'] ?? '') !== 'COMPLETED') {
+            return redirect('/')->with('error', 'PayPal payment not completed.');
+        }
+
+        // Find transaction by merchant_ref (PayPal order ID)
+        $trx = Transaction::where('merchant_ref', $paypalOrderId)->first();
+
+        if (!$trx) {
+            \Log::error('PayPal return: transaction not found', ['paypal_order_id' => $paypalOrderId]);
+            return redirect('/')->with('error', 'Transaction not found.');
+        }
+
+        $issuedCodes = [];
+
+        if ($trx->status !== 'PAID') {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($trx, &$issuedCodes, $captureData) {
+                $trx->update([
+                    'status'          => 'PAID',
+                    'payment_details' => json_encode([
+                        'type'      => 'paypal',
+                        'paypal_id' => $trx->merchant_ref,
+                    ]),
+                ]);
+
+                if (empty($trx->vouchers_issued)) {
+                    $vouchers = \App\Models\VoucherCode::where('variant_id', $trx->variant_id)
+                        ->where('status', 'AVAILABLE')
+                        ->lockForUpdate()
+                        ->take($trx->quantity)
+                        ->get();
+
+                    if ($vouchers->count() >= $trx->quantity) {
+                        foreach ($vouchers as $vc) {
+                            $vc->update(['status' => 'SOLD']);
+                            $issuedCodes[] = $vc->code;
+                        }
+                        if (!empty($issuedCodes)) {
+                            $trx->update(['vouchers_issued' => implode(', ', $issuedCodes)]);
+                        }
+                    } else {
+                        \Log::critical('PAYPAL OVERSOLD PREVENTED: Order ' . $trx->reference);
+                        $trx->update(['status' => 'FAILED_OVERSOLD']);
+                    }
+                } else {
+                    $issuedCodes = explode(', ', $trx->vouchers_issued);
+                }
+            });
+
+            // Send Discord DM + admin notification
+            $user = \App\Models\User::find($trx->user_id);
+            $orderData = [
+                'order_id'       => $trx->reference,
+                'product_name'   => $trx->product_name,
+                'quantity'       => $trx->quantity,
+                'unit_price'     => ($trx->original_price / max($trx->quantity, 1)) / 100,
+                'discount'       => 0,
+                'total'          => $trx->price / 100,
+                'currency'       => 'USD',
+                'payment_method' => 'PayPal',
+                'customer_email' => $trx->customer_email,
+                'promo_code'     => $trx->promo_code,
+                'paid_at'        => now()->format('d M Y, H:i'),
+                'discord_name'   => $user->name ?? null,
+                'discord_id'     => $user->discord_id ?? null,
+                'vouchers'       => $issuedCodes,
+            ];
+            self::sendDiscordNotification($orderData);
+        } else {
+            $issuedCodes = explode(', ', $trx->vouchers_issued ?? '');
+        }
+
+        $trx = $trx->fresh();
+        $user = auth()->user();
+
+        $this->storeOrderSession([
+            'order_id'       => $trx->reference,
+            'variant_id'     => $trx->variant_id,
+            'product_name'   => $trx->product_name,
+            'quantity'       => $trx->quantity,
+            'unit_price'     => ($trx->original_price / max($trx->quantity, 1)) / 100,
+            'discount'       => 0,
+            'total'          => $trx->price / 100,
+            'currency'       => 'USD',
+            'payment_method' => 'PayPal (Goods & Services)',
+            'customer_email' => $trx->customer_email,
+            'promo_code'     => $trx->promo_code,
+            'paid_at'        => $trx->updated_at->format('d M Y, H:i'),
+            'discord_name'   => $user->name ?? null,
+            'discord_id'     => $user->discord_id ?? null,
+            'vouchers'       => $issuedCodes,
+        ]);
+
+        return redirect(route('payment.success'));
+    }
+
+    // ─────────────────────────────────────────────────────
+    private function processCrypto($variant, $originalUnitPriceUSD, $discountUSD, $finalTotalUSD, $quantity, $email, $promoCode)
+    {
+        $apiKey = env('NOWPAYMENTS_API_KEY');
+
+        if (!$apiKey) {
+            return back()->with('error', 'Crypto payments are currently unavailable. Please use another payment method.');
+        }
+
+        $orderId = 'INV-' . time() . '-' . rand(100, 999);
+
+        try {
+            $response = Http::withHeaders([
+                'x-api-key'    => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post('https://api.nowpayments.io/v1/invoice', [
+                'price_amount'        => round($finalTotalUSD, 2),
+                'price_currency'      => 'usd',
+                'order_id'            => $orderId,
+                'order_description'   => substr($variant->product->name . ' (' . $variant->duration . ')', 0, 100),
+                'ipn_callback_url'    => route('callback.crypto'),
+                'success_url'         => route('payment.success') . '?ref=' . $orderId,
+                'cancel_url'          => url('/'),
+                'is_fixed_rate'       => false,
+                'is_fee_paid_by_user' => true,
+            ]);
+
+            if (!$response->successful()) {
+                \Log::error('NOWPayments invoice failed', ['response' => $response->json()]);
+                return back()->with('error', 'Crypto payment setup failed. Please try again.');
+            }
+
+            $invoice    = $response->json();
+            $invoiceUrl = $invoice['invoice_url'] ?? null;
+            $invoiceId  = (string) ($invoice['id'] ?? $orderId);
+
+            if (!$invoiceUrl) {
+                return back()->with('error', 'Crypto payment URL not received.');
+            }
+
+            $totalCents = (int) round($finalTotalUSD * 100);
+
+            Transaction::create([
+                'user_id'        => auth()->id(),
+                'reference'      => $orderId,
+                'merchant_ref'   => $invoiceId,
+                'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+                'variant_id'     => $variant->id,
+                'quantity'       => $quantity,
+                'price'          => $totalCents,
+                'original_price' => (int) round($originalUnitPriceUSD * $quantity * 100),
+                'promo_code'     => $promoCode,
+                'gift_username'  => $variant->product->delivery_method === 'gift' ? request('gift_username') : null,
+                'customer_email' => $email,
+                'status'         => 'UNPAID',
+                'payment_method' => 'CRYPTO',
+                'checkout_url'   => $invoiceUrl,
+            ]);
+
+            $this->storeOrderSession([
+                'order_id'       => $orderId,
+                'variant_id'     => $variant->id,
+                'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+                'quantity'       => $quantity,
+                'unit_price'     => $originalUnitPriceUSD,
+                'discount'       => $discountUSD,
+                'total'          => $totalCents / 100,
+                'currency'       => 'USD',
+                'payment_method' => 'Crypto (BTC/ETH/USDT/+300 coins)',
+                'customer_email' => $email,
+                'promo_code'     => $promoCode,
+                'paid_at'        => now()->format('d M Y, H:i'),
+            ]);
+
+            self::sendAdminChannelNotification([
+                'order_id'       => $orderId,
+                'product_name'   => $variant->product->name . ' (' . $variant->duration . ')',
+                'quantity'       => $quantity,
+                'total'          => $totalCents / 100,
+                'currency'       => 'USD',
+                'payment_method' => 'Crypto',
+                'customer_email' => $email,
+                'discord_name'   => auth()->user()->name ?? null,
+                'discord_id'     => auth()->user()->discord_id ?? null,
+            ]);
+
+            return redirect($invoiceUrl);
+
+        } catch (\Exception $e) {
+            \Log::error('Crypto payment exception: ' . $e->getMessage());
+            return back()->with('error', 'Crypto payment error. Please try again.');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────
     private function storeOrderSession(array $data)
     {
         session(['payment_success_order' => $data]);
@@ -324,6 +700,35 @@ class PaymentController extends Controller
     {
         // Ambil data order dari session
         $order = session('payment_success_order');
+
+        // Fallback: if arriving from crypto success URL with ?ref= but no session
+        if (!$order && request()->filled('ref')) {
+            $refTrx = \App\Models\Transaction::where('reference', request('ref'))->first();
+            if ($refTrx && strtoupper($refTrx->payment_method) === 'CRYPTO') {
+                $user = auth()->user();
+                $order = [
+                    'order_id'        => $refTrx->reference,
+                    'product_name'    => $refTrx->product_name,
+                    'quantity'        => $refTrx->quantity,
+                    'unit_price'      => ($refTrx->original_price / max($refTrx->quantity, 1)) / 100,
+                    'discount'        => 0,
+                    'total'           => $refTrx->price / 100,
+                    'currency'        => 'USD',
+                    'payment_method'  => 'Crypto (BTC/ETH/USDT/+300 coins)',
+                    'customer_email'  => $refTrx->customer_email,
+                    'promo_code'      => $refTrx->promo_code,
+                    'paid_at'         => now()->format('d M Y, H:i'),
+                    'discord_name'    => $user->name ?? null,
+                    'discord_id'      => $user->discord_id ?? null,
+                    'crypto_pending'  => $refTrx->status !== 'PAID',
+                    'crypto_order_id' => $refTrx->reference,
+                ];
+                if ($refTrx->status === 'PAID' && !empty($refTrx->vouchers_issued)) {
+                    $order['vouchers'] = explode(', ', $refTrx->vouchers_issued);
+                    $order['crypto_pending'] = false;
+                }
+            }
+        }
 
         // Jika tidak ada data di session (direct access), buat placeholder
         if (!$order) {
@@ -354,6 +759,20 @@ class PaymentController extends Controller
 
         if (isset($order['order_id'])) {
             $trx = \App\Models\Transaction::where('reference', $order['order_id'])->first();
+
+            // For CRYPTO: check DB status — webhook may not have fired yet
+            if ($trx && strtoupper($trx->payment_method ?? '') === 'CRYPTO') {
+                if ($trx->status === 'PAID' && !empty($trx->vouchers_issued)) {
+                    $issuedCodes = explode(', ', $trx->vouchers_issued);
+                } else {
+                    $order['crypto_pending'] = true;
+                    $order['crypto_order_id'] = $trx->reference ?? null;
+                }
+                session()->forget('payment_success_order');
+                $order['vouchers'] = $issuedCodes;
+                return view('payment.success', compact('order'));
+            }
+
             if ($trx) {
                 // Verifikasi status pembayaran Stripe
                 if (strtoupper($trx->payment_method) === 'STRIPE') {
@@ -400,13 +819,13 @@ class PaymentController extends Controller
                                                            ->lockForUpdate() // Prevent Race Condition & Overselling
                                                            ->take($trx->quantity)
                                                            ->get();
-                        
+
                         if ($vouchers->count() >= $trx->quantity) {
                             foreach ($vouchers as $vc) {
                                 $vc->update(['status' => 'SOLD']);
                                 $issuedCodes[] = $vc->code;
                             }
-                            
+
                             $trx->update([
                                 'status' => 'PAID',
                                 'vouchers_issued' => implode(", ", $issuedCodes)
@@ -469,6 +888,44 @@ class PaymentController extends Controller
 
         // 1. DM langsung ke user via Discord Bot
         self::sendDiscordDM($order['discord_id'] ?? null, $embed);
+    }
+
+    /**
+     * Send a notification to admin Discord channel webhook when a new order is placed.
+     */
+    public static function sendAdminChannelNotification(array $order): void
+    {
+        $webhookUrl = env('DISCORD_ADMIN_WEBHOOK');
+        if (!$webhookUrl) return;
+
+        $currency = $order['currency'] ?? 'IDR';
+        $amount   = $currency === 'IDR'
+            ? 'Rp ' . number_format($order['total'] ?? 0, 0, ',', '.')
+            : '$ ' . number_format($order['total'] ?? 0, 2);
+
+        $payload = [
+            'embeds' => [[
+                'title'       => '🛒 New Order — ABUSER STORE',
+                'description' => 'A new order has been placed!',
+                'color'       => 0x22C55E,
+                'fields'      => [
+                    ['name' => '📋 Invoice',    'value' => '`' . ($order['order_id'] ?? 'N/A') . '`',     'inline' => true],
+                    ['name' => '📦 Product',    'value' => $order['product_name'] ?? '-',                  'inline' => true],
+                    ['name' => '💳 Payment',    'value' => $order['payment_method'] ?? '-',               'inline' => true],
+                    ['name' => '💰 Amount',     'value' => '**' . $amount . '**',                          'inline' => true],
+                    ['name' => '📧 Email',      'value' => $order['customer_email'] ?? '-',               'inline' => true],
+                    ['name' => '👤 Discord',    'value' => $order['discord_name'] ?? 'Unknown',           'inline' => true],
+                ],
+                'timestamp' => now()->toIso8601String(),
+                'footer'    => ['text' => 'ABUSER STORE · New Order Notification'],
+            ]],
+        ];
+
+        try {
+            \Illuminate\Support\Facades\Http::timeout(5)->post($webhookUrl, $payload);
+        } catch (\Exception $e) {
+            \Log::warning('Admin Discord webhook notification failed: ' . $e->getMessage());
+        }
     }
 
     // ── Buat embed invoice ─────────────────────────────
@@ -596,7 +1053,7 @@ class PaymentController extends Controller
                     'content' => '> 🛒 **ABUSER STORE** – Invoice Pembayaran Kamu',
                     'embeds'  => [$embed],
                 ]);
-                
+
             if (!$msgRes->successful()) {
                 \Log::critical('Discord message sending FAILED permanently after 3 retries.', ['response' => $msgRes->body(), 'channel_id' => $channelId]);
             }

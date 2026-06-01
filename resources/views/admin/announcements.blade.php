@@ -308,6 +308,10 @@
 
     <div class="ann-modal-footer">
         <button type="button" onclick="closeAnnModal()" class="btn btn-secondary" data-tr="cancel">Cancel</button>
+        <button type="button" onclick="previewAnnouncement()" class="btn btn-secondary">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            Preview
+        </button>
         <button type="button" onclick="submitAnnForm()" class="btn btn-primary">
             <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
             <span data-tr="save_publish">Save & Publish</span>
@@ -343,7 +347,7 @@ function openAnnModal() {
     form.action = "{{ route('admin.announcements.store') }}";
     document.getElementById('annMethod').disabled = true;
     document.getElementById('annModalTitle').textContent = "Create Announcement";
-    
+
     // Reset specific fields
     document.getElementById('annEditor').innerHTML = "";
     document.getElementById('previewTitle').textContent = "Your announcement title";
@@ -362,19 +366,19 @@ function editAnn(id) {
 
     const form = document.getElementById('annForm');
     form.action = `/admin/announcements/${id}`;
-    
+
     const methodInput = document.getElementById('annMethod');
     methodInput.value = "PUT";
     methodInput.disabled = false;
-    
+
     document.getElementById('annModalTitle').textContent = "Edit Announcement";
 
     // Populate fields
     form.elements['title'].value = ann.title;
     document.getElementById('previewTitle').textContent = ann.title;
-    
+
     document.getElementById('pubToggle').checked = ann.is_active;
-    
+
     // Dates
     if (ann.starts_at) {
         const d = new Date(ann.starts_at);
@@ -382,7 +386,7 @@ function editAnn(id) {
     } else {
         form.elements['starts_at'].value = '';
     }
-    
+
     if (ann.ends_at) {
         const d = new Date(ann.ends_at);
         form.elements['ends_at'].value = d.toISOString().slice(0, 16);
@@ -510,6 +514,86 @@ function submitAnnForm() {
     const form = document.getElementById('annForm');
     if (!form.reportValidity()) return;
     form.submit();
+}
+</script>
+
+<script>
+async function previewAnnouncement() {
+    const form = document.querySelector('form[action*="announcements"]');
+    if (!form) return;
+
+    const title = form.querySelector('[name="title"]')?.value;
+    const content = form.querySelector('[name="content"]')?.value;
+    const style = form.querySelector('[name="popup_style"]')?.value || 'default';
+
+    if (!title || !content) {
+        alert('Please fill in Title and Content first.');
+        return;
+    }
+
+    try {
+        const res = await fetch('{{ route('admin.announcements.preview') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ title, content, popup_style: style })
+        });
+        const ann = await res.json();
+
+        window._previewAnn = ann;
+        showPreviewPopup(ann);
+    } catch(e) {
+        alert('Preview failed: ' + e.message);
+    }
+}
+
+function showPreviewPopup(ann) {
+    const STYLE_LABELS = { default:'ANNOUNCEMENT', warning:'WARNING', success:'NOTICE', promo:'PROMO 🎁' };
+    const STYLE_ICONS  = { default:'📢', warning:'⚠️', success:'✅', promo:'🎁' };
+
+    const overlay = document.createElement('div');
+    overlay.id = 'previewOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    const style = ann.popup_style || 'default';
+    const gradients = {
+        default: 'linear-gradient(90deg,#2563eb,#7c3aed,#2563eb)',
+        warning: 'linear-gradient(90deg,#d97706,#f59e0b,#d97706)',
+        success: 'linear-gradient(90deg,#059669,#10b981,#059669)',
+        promo:   'linear-gradient(90deg,#7c3aed,#a855f7,#7c3aed)',
+    };
+    const btnColors = {
+        default: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
+        warning: 'linear-gradient(135deg,#d97706,#b45309)',
+        success: 'linear-gradient(135deg,#059669,#047857)',
+        promo:   'linear-gradient(135deg,#7c3aed,#6d28d9)',
+    };
+
+    overlay.innerHTML = `
+        <div style="background:linear-gradient(145deg,#1a1d2e,#13151f);border:1px solid rgba(255,255,255,0.08);border-radius:20px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,0.6);position:relative;">
+            <div style="height:3px;background:${gradients[style]};border-radius:20px 20px 0 0;"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px 0;gap:12px;">
+                <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(37,99,235,0.18);border:1px solid rgba(37,99,235,0.25);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;">${STYLE_ICONS[style]||'📢'}</div>
+                    <div style="min-width:0;">
+                        <div style="font-size:0.95rem;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ann.title}</div>
+                        <div style="font-size:0.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#2563eb;background:rgba(37,99,235,0.12);padding:2px 7px;border-radius:20px;display:inline-block;margin-top:2px;">${STYLE_LABELS[style]||'ANNOUNCEMENT'}</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('previewOverlay').remove()" style="width:32px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.95rem;flex-shrink:0;">✕</button>
+            </div>
+            <div style="padding:18px 24px 20px;font-size:0.875rem;line-height:1.75;color:#94a3b8;">${ann.content}</div>
+            <div style="padding:0 24px 20px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.05);padding-top:14px;">
+                <span style="font-size:0.75rem;color:#64748b;font-style:italic;">Preview Mode — not published</span>
+                <button onclick="document.getElementById('previewOverlay').remove()" style="padding:7px 18px;border-radius:8px;border:none;background:${btnColors[style]};color:#fff;cursor:pointer;font-size:0.78rem;font-weight:700;">Close Preview</button>
+            </div>
+        </div>
+    `;
+
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
 }
 </script>
 

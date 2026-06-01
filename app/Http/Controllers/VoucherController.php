@@ -13,7 +13,7 @@ class VoucherController extends Controller
     {
         // Panggil relasi 'vouchers' yang ada di Model Variant
         $product = Product::with('variants.vouchers')->findOrFail($productId);
-        
+
         return view('admin.vouchers.index', compact('product'));
     }
 
@@ -40,6 +40,8 @@ class VoucherController extends Controller
             }
         }
 
+        \App\Models\AdminLog::record('created', 'voucher', null, 'Added voucher codes to variant ID: ' . $request->variant_id);
+
         return back()->with('success', "Berhasil menambahkan $count stok voucher!");
     }
     // FUNGSI HAPUS KODE
@@ -47,6 +49,7 @@ class VoucherController extends Controller
     {
         // Cari kode berdasarkan ID, lalu hapus
         $voucher = VoucherCode::findOrFail($id);
+        \App\Models\AdminLog::record('deleted', 'voucher', $id, 'Deleted voucher code ID: ' . $id);
         $voucher->delete();
 
         return back()->with('success', 'Kode voucher berhasil dibuang ke tong sampah!');

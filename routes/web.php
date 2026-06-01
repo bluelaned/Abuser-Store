@@ -15,14 +15,16 @@ use App\Http\Controllers\AnnouncementController;
 // --- HALAMAN PUBLIK ---
 Route::get('/', [ProductController::class, 'index'])->name('home');
 Route::get('/checkout/{id}', [ProductController::class, 'checkout'])->name('checkout');
-Route::view('/terms', 'tos')->name('tos');
-Route::view('/privacy', 'privacy')->name('privacy');
+Route::get('/terms', [App\Http\Controllers\StaticPageController::class, 'showTos'])->name('tos');
+Route::get('/privacy', [App\Http\Controllers\StaticPageController::class, 'showPrivacy'])->name('privacy');
 Route::get('/reviews', [App\Http\Controllers\ReviewController::class, 'publicIndex'])->name('reviews.index');
 
 Route::post('/checkout/check-promo', [PaymentController::class, 'checkPromo'])->name('payment.check_promo')->middleware('throttle:15,1');
 Route::post('/checkout/process', [PaymentController::class, 'process'])->name('payment.process')->middleware('auth');
 
 Route::get('/payment/success', [PaymentController::class, 'success'])->name('payment.success');
+Route::get('/payment/paypal/return', [PaymentController::class, 'paypalReturn'])->name('payment.paypal.return');
+Route::post('/callback/crypto', [App\Http\Controllers\CallbackController::class, 'handleCrypto'])->name('callback.crypto');
 Route::get('/invoice/{reference}', [TransactionController::class, 'show'])->name('transaction.show');
 Route::post('/callback/midtrans', [CallbackController::class, 'handle']);
 
@@ -48,10 +50,21 @@ Route::post('/profile/{name}.{id}/banner', [App\Http\Controllers\ProfileControll
 Route::post('/profile/{name}.{id}/bio', [App\Http\Controllers\ProfileController::class, 'updateBio'])->name('profile.update_bio')->middleware('auth');
 Route::post('/profile/{name}.{id}/avatar', [App\Http\Controllers\ProfileController::class, 'updateAvatarAndFrame'])->name('profile.update_avatar')->middleware('auth');
 
+// --- ORDER STATUS CHECK ---
+Route::get('/order-status', [App\Http\Controllers\TransactionController::class, 'orderStatus'])->name('order.status');
+Route::get('/order-status/{reference}/check', [App\Http\Controllers\TransactionController::class, 'checkStatus'])->name('order.check');
+
+// --- WISHLIST (Auth required) ---
+Route::get('/wishlist', [App\Http\Controllers\WishlistController::class, 'index'])->name('wishlist.index')->middleware('auth');
+Route::post('/wishlist/{id}/toggle', [App\Http\Controllers\WishlistController::class, 'toggle'])->name('wishlist.toggle')->middleware('auth');
+
 // --- HALAMAN ADMIN (Wajib Login & Role Admin) ---
 Route::middleware(['auth', 'admin', 'throttle:60,1'])->prefix('admin')->group(function () {
-    
+
     Route::get('/dashboard', [ProductController::class, 'adminDashboard'])->name('admin.dashboard');
+
+    // Export Transactions
+    Route::get('/transactions/export', [App\Http\Controllers\TransactionController::class, 'export'])->name('admin.transactions.export');
 
     Route::get('/transactions', [TransactionController::class, 'index'])->name('admin.transactions.index');
     Route::get('/transactions/chart-data', [TransactionController::class, 'chartData'])->name('admin.transactions.chart');
@@ -87,10 +100,21 @@ Route::middleware(['auth', 'admin', 'throttle:60,1'])->prefix('admin')->group(fu
 
     // Announcements
     Route::get('/announcements', [AnnouncementController::class, 'index'])->name('admin.announcements');
+    Route::post('/announcements/preview', [App\Http\Controllers\AnnouncementController::class, 'preview'])->name('admin.announcements.preview');
     Route::post('/announcements', [AnnouncementController::class, 'store'])->name('admin.announcements.store');
     Route::put('/announcements/{id}', [AnnouncementController::class, 'update'])->name('admin.announcements.update');
     Route::patch('/announcements/{id}/toggle', [AnnouncementController::class, 'toggle'])->name('admin.announcements.toggle');
     Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy'])->name('admin.announcements.destroy');
+
+    // Static Pages Management
+    Route::get('/static-pages', [App\Http\Controllers\StaticPageController::class, 'index'])->name('admin.static_pages');
+    Route::put('/static-pages/{slug}', [App\Http\Controllers\StaticPageController::class, 'update'])->name('admin.static_pages.update');
+
+    // Activity Logs
+    Route::get('/activity-logs', [App\Http\Controllers\AdminLogController::class, 'index'])->name('admin.activity_logs');
+
+    // User Growth Data (AJAX)
+    Route::get('/users/growth-data', [App\Http\Controllers\AdminUserController::class, 'growthData'])->name('admin.users.growth');
 });
 
 // --- PUBLIC API ---

@@ -21,6 +21,10 @@
 
     <div class="page-content">
         <a href="/" class="back-link">← Back to Home</a>
+        @if(!empty($page) && !empty($page->content))
+            <h1>{{ $page->title }}</h1>
+            {!! $page->content !!}
+        @else
         <h1>Privacy Policy</h1>
         <p><em>Last updated: {{ date('F j, Y') }}</em></p>
 
@@ -48,6 +52,7 @@
 
         <h2>5. Your Rights</h2>
         <p>If you wish to delete your account or have your data removed from our systems, please contact our support team via our Discord server.</p>
+        @endif
     </div>
 
     <footer>

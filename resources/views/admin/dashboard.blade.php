@@ -13,6 +13,36 @@
     </button>
 </div>
 
+@if ($errors->any())
+    <div style="background: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; padding: 12px 20px; border-radius: 8px; margin-bottom: 20px;">
+        <strong style="display: block; margin-bottom: 8px;">Failed to add product:</strong>
+        <ul style="margin: 0; padding-left: 20px;">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+{{-- === STOCK ALERT SECTION === --}}
+@if(isset($lowStockVariants) && $lowStockVariants->count() > 0)
+<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:16px 20px;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <svg width="18" height="18" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <span style="font-weight:700;color:#ef4444;font-size:0.9rem;">⚠ Stock Alert — {{ $lowStockVariants->count() }} variant(s) running low!</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        @foreach($lowStockVariants as $v)
+        <a href="{{ route('admin.vouchers.index', $v->product_id) }}" style="display:inline-flex;align-items:center;gap:6px;background:var(--bg-card);border:1px solid rgba(239,68,68,0.4);border-radius:6px;padding:6px 12px;text-decoration:none;font-size:0.8rem;color:var(--text-main);transition:0.2s;" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='rgba(239,68,68,0.4)'">
+            <span style="font-weight:600;">{{ $v->product->name ?? 'Unknown' }}</span>
+            <span style="color:var(--text-muted);">— {{ $v->duration }}</span>
+            <span style="background:{{ $v->available_stock == 0 ? '#ef4444' : '#f97316' }};color:white;padding:1px 7px;border-radius:20px;font-weight:700;font-size:0.72rem;">{{ $v->available_stock }} left</span>
+        </a>
+        @endforeach
+    </div>
+</div>
+@endif
+
 <div class="card" id="adminTableCard">
     <table>
         <thead>
@@ -20,6 +50,8 @@
                 <th width="80" data-tr="image">Image</th>
                 <th data-tr="product_info">Product Info</th>
                 <th data-tr="total_packages">Total Packages</th>
+                <th>Harga Jual</th>
+                <th>Profit</th>
                 <th data-tr="status">Status</th>
                 <th data-tr="action">Action</th>
             </tr>
@@ -42,17 +74,40 @@
             @forelse($products as $p)
             <tr>
                 <td>
-                    @if($p->image) 
+                    @if($p->image)
                         <img src="{{ asset('storage/' . $p->image) }}" class="img-thumb" alt="{{ $p->name }}">
-                    @else 
-                        <div class="img-thumb">NoImg</div> 
+                    @else
+                        <div class="img-thumb">NoImg</div>
                     @endif
                 </td>
                 <td>
                     <div style="font-weight:600; font-size:0.95rem;">{{ $p->name }}</div>
                     <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">ID: #{{ $p->id }}</div>
+                    @if($p->delivery_method === 'gift')
+                        <div style="font-size:0.72rem; margin-top:3px;"><span style="background:rgba(0,170,255,0.12);color:#00aaff;padding:2px 8px;border-radius:20px;font-weight:700;">🎁 Gift</span></div>
+                    @else
+                        <div style="font-size:0.72rem; margin-top:3px;"><span style="background:rgba(16,185,129,0.12);color:#10b981;padding:2px 8px;border-radius:20px;font-weight:700;">🔑 Serial</span></div>
+                    @endif
                 </td>
                 <td>{{ $p->variants->count() }} <span data-tr="variants">Variants</span></td>
+                <td>
+                    @if($p->selling_price)
+                        @php $sym = ['USD'=>'$','IDR'=>'Rp ','EUR'=>'€','GBP'=>'£','MYR'=>'RM ','SGD'=>'S$','THB'=>'฿','JPY'=>'¥','AUD'=>'A$'][$p->profit_currency ?? 'USD'] ?? '$'; $dec = in_array($p->profit_currency ?? 'USD', ['IDR','JPY']) ? 0 : 2; @endphp
+                        <div style="font-weight:700;color:var(--text-main);">{{ $sym . number_format($p->selling_price, $dec) }}</div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);">Cost: {{ $sym . number_format($p->official_price ?? 0, $dec) }}</div>
+                    @else
+                        <span style="color:var(--text-muted);font-size:0.8rem;">—</span>
+                    @endif
+                </td>
+                <td>
+                    @if($p->selling_price && $p->official_price)
+                        @php $profit = max(0, $p->selling_price - $p->official_price); $profitPct = $p->official_price > 0 ? round(($profit/$p->official_price)*100, 1) : 0; @endphp
+                        <div style="font-weight:800; color:#10b981;">+{{ $sym . number_format($profit, $dec) }}</div>
+                        <div style="font-size:0.72rem; background:rgba(16,185,129,0.12); color:#10b981; padding:2px 8px; border-radius:20px; display:inline-block; font-weight:700;">{{ $profitPct }}%</div>
+                    @else
+                        <span style="color:var(--text-muted);font-size:0.8rem;">—</span>
+                    @endif
+                </td>
                 <td><span class="badge badge-success">Active</span></td>
                 <td>
                     <div style="display:flex; gap:8px;">
@@ -67,7 +122,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);" data-tr="no_products">
+                <td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);" data-tr="no_products">
                     No products yet. Please add a new product.
                 </td>
             </tr>
@@ -407,7 +462,7 @@
                     <span data-tr="basic_info">Basic Information</span>
                 </div>
 
-                <div class="form-row cols-2">
+                <div class="form-row" style="display: grid; grid-template-columns: 1.2fr 0.9fr 0.9fr; gap: 16px; margin-bottom: 16px;">
                     <div class="form-group">
                         <label class="form-label" data-tr="product_name">Product Name</label>
                         <input type="text" name="name" class="form-control" placeholder="e.g: Fatality Premium" required>
@@ -418,6 +473,65 @@
                             <option value="external">EXTERNAL</option>
                             <option value="internal">INTERNAL</option>
                         </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Delivery Method</label>
+                        <select name="delivery_method" class="form-control" required>
+                            <option value="serial">Voucher / Serial Key</option>
+                            <option value="gift">Via Gift to Account</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label class="form-label">Category <span style="font-size:.75rem;color:var(--text-muted);font-weight:400;">(optional)</span></label>
+                    <input type="text" name="category" class="form-control" placeholder="e.g: Game, Software, Streaming...">
+                </div>
+
+                <!-- ── HARGA PROFIT ── -->
+                <div class="section-label">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    <span>Harga & Profit</span>
+                </div>
+                <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr 0.7fr; gap:16px; margin-bottom:0;">
+                    <div class="form-group">
+                        <label class="form-label">Harga Official (Cost)</label>
+                        <input type="number" name="official_price" id="officialPriceInput" class="form-control" step="0.01" min="0" placeholder="e.g: 10.00" oninput="calcProfit()">
+                        <span style="font-size:.72rem; color:var(--text-muted); margin-top:4px; display:block;">Harga dari supplier / official</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Harga Jual (Selling)</label>
+                        <input type="number" name="selling_price" id="sellingPriceInput" class="form-control" step="0.01" min="0" placeholder="e.g: 13.00" oninput="calcProfit()">
+                        <span style="font-size:.72rem; color:var(--text-muted); margin-top:4px; display:block;">Harga yang ditampilkan ke user</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Currency</label>
+                        <select name="profit_currency" id="profitCurrencyInput" class="form-control" onchange="calcProfit()">
+                            <option value="USD">USD ($)</option>
+                            <option value="IDR">IDR (Rp)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="MYR">MYR (RM)</option>
+                            <option value="SGD">SGD (S$)</option>
+                            <option value="AUD">AUD (A$)</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Profit Preview Card -->
+                <div id="profitPreview" style="display:none; margin-bottom:20px; padding:16px; border-radius:12px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); display:flex; gap:24px; align-items:center;">
+                    <div style="text-align:center;">
+                        <div style="font-size:.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Cost</div>
+                        <div id="ppCost" style="font-size:1.1rem; font-weight:800; color:var(--text-main);">—</div>
+                    </div>
+                    <div style="font-size:1.4rem; color:var(--text-muted);">→</div>
+                    <div style="text-align:center;">
+                        <div style="font-size:.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px;">Selling</div>
+                        <div id="ppSell" style="font-size:1.1rem; font-weight:800; color:var(--primary);">—</div>
+                    </div>
+                    <div style="flex:1;"></div>
+                    <div style="text-align:right;">
+                        <div style="font-size:.72rem; font-weight:700; color:#10b981; text-transform:uppercase; letter-spacing:.5px;">Profit Anda</div>
+                        <div id="ppProfit" style="font-size:1.5rem; font-weight:900; color:#10b981;">+0</div>
+                        <div id="ppPct" style="font-size:.8rem; font-weight:700; background:rgba(16,185,129,0.2); color:#10b981; padding:2px 10px; border-radius:20px; display:inline-block; margin-top:4px;">0%</div>
                     </div>
                 </div>
 
@@ -431,7 +545,7 @@
                     <!-- Cover -->
                     <div class="upload-zone cover-zone">
                         <input type="file" name="image" accept="image/*" id="coverInput"
-                               onchange="showFileName(this,'coverName')">
+                               onchange="showFileName(this,'coverName')" required>
                         <div class="upload-icon" style="background:rgba(37,99,235,.1);">
                             <svg width="20" height="20" fill="none" stroke="var(--primary)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </div>
@@ -549,6 +663,31 @@
         }
     }
 
+    const CURRENCY_SYMS = { USD:'$', IDR:'Rp ', EUR:'€', GBP:'£', MYR:'RM ', SGD:'S$', THB:'฿', JPY:'¥', AUD:'A$' };
+
+    function calcProfit() {
+        const cost   = parseFloat(document.getElementById('officialPriceInput').value) || 0;
+        const sell   = parseFloat(document.getElementById('sellingPriceInput').value)  || 0;
+        const cur    = document.getElementById('profitCurrencyInput').value || 'USD';
+        const sym    = CURRENCY_SYMS[cur] || '$';
+        const dec    = (cur === 'IDR' || cur === 'JPY') ? 0 : 2;
+        const profit = Math.max(0, sell - cost);
+        const pct    = cost > 0 ? ((profit / cost) * 100).toFixed(1) : '0';
+
+        const preview = document.getElementById('profitPreview');
+
+        if (cost > 0 || sell > 0) {
+            preview.style.display = 'flex';
+            document.getElementById('ppCost').textContent   = sym + cost.toFixed(dec);
+            document.getElementById('ppSell').textContent   = sym + sell.toFixed(dec);
+            document.getElementById('ppProfit').textContent = (profit >= 0 ? '+' : '') + sym + profit.toFixed(dec);
+            document.getElementById('ppPct').textContent    = pct + '%';
+            document.getElementById('ppProfit').style.color = profit >= 0 ? '#10b981' : '#ef4444';
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+
     function addVariant() {
         const row = `<div class="variant-row">
             <input type="text" name="durations[]" class="form-control" placeholder="e.g: 3 Months" required>
@@ -581,4 +720,4 @@
         }
     }
 </script>
-@endsection
+@endsection

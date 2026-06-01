@@ -42,6 +42,8 @@ class AnnouncementController extends Controller
             'created_by'  => Auth::id(),
         ]);
 
+        \App\Models\AdminLog::record('created', 'announcement', null, "Created announcement: {$request->title}");
+
         return back()->with('success', 'Announcement created and ' . ($request->boolean('is_active') ? 'published!' : 'saved as draft.'));
     }
 
@@ -81,6 +83,8 @@ class AnnouncementController extends Controller
             'ends_at'     => $request->ends_at   ?: null,
         ]);
 
+        \App\Models\AdminLog::record('updated', 'announcement', $ann->id, "Updated announcement: {$ann->title}");
+
         return back()->with('success', 'Announcement updated successfully!');
     }
 
@@ -90,7 +94,27 @@ class AnnouncementController extends Controller
     public function destroy($id)
     {
         Announcement::findOrFail($id)->delete();
+        \App\Models\AdminLog::record('deleted', 'announcement', $id, "Deleted announcement ID: {$id}");
         return back()->with('success', 'Announcement deleted.');
+    }
+
+    /**
+     * Admin: preview announcement before saving.
+     */
+    public function preview(Request $request)
+    {
+        $request->validate([
+            'title'       => 'required|string|max:255',
+            'content'     => 'required|string',
+            'popup_style' => 'nullable|string|in:default,warning,success,promo',
+        ]);
+
+        return response()->json([
+            'id'          => 0,
+            'title'       => $request->title,
+            'content'     => $request->content,
+            'popup_style' => $request->popup_style ?? 'default',
+        ]);
     }
 
     /**

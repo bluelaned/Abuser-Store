@@ -49,6 +49,7 @@ class ReviewController extends Controller
     {
         $review = Review::findOrFail($id);
         $review->update(['is_published' => !$review->is_published]);
+        \App\Models\AdminLog::record('updated', 'review', $id, 'Toggled publish status for review ID: ' . $id);
         return back()->with('success', 'Status review berhasil diubah!');
     }
 
@@ -56,6 +57,7 @@ class ReviewController extends Controller
     public function destroy($id)
     {
         $review = Review::findOrFail($id);
+        \App\Models\AdminLog::record('deleted', 'review', $id, 'Deleted review ID: ' . $id);
         $review->delete();
         return back()->with('success', 'Review berhasil dihapus!');
     }

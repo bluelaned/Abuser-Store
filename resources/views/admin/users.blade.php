@@ -7,15 +7,15 @@
     /* Modal Edit Email */
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 999; align-items: center; justify-content: center; }
     .modal-content { background: var(--bg-card); padding: 32px; border-radius: 12px; width: 400px; max-width: 90vw; border: 1px solid var(--border-color); box-shadow: 0 10px 25px rgba(0,0,0,0.3); animation: modalSlideIn 0.3s cubic-bezier(0.22,1,0.36,1) both; }
-    
+
     .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .online { background-color: var(--success); box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
     .offline { background-color: var(--danger); }
-    
+
     .stat-card { background: var(--bg-card); border: 1px solid var(--border-color); padding: 24px; border-radius: 12px; display: flex; align-items: center; gap: 16px; min-width: 240px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
     .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-    
+
     /* Table Layout Fixes */
     table th, table td { padding: 12px 16px; white-space: nowrap; }
     table td { color: var(--text-muted); }
@@ -23,14 +23,14 @@
 
 <div class="header-actions">
     <h1 data-tr="active_users">Active Users</h1>
-    
+
     @php
         $totalMembers = $users->count();
         $onlineMembers = $users->filter(function($u) {
             return $u->last_seen && \Carbon\Carbon::parse($u->last_seen)->diffInMinutes(now()) < 5;
         })->count();
     @endphp
-    
+
     {{-- SKELETON stat cards --}}
     <div id="skStats" style="display: flex; gap: 16px;">
         <div class="stat-card">
@@ -71,6 +71,55 @@
     </div>
 </div>
 
+{{-- === USER STATS + GROWTH CHART === --}}
+<div style="display:grid;grid-template-columns:1fr 280px;gap:20px;margin-bottom:24px;">
+    {{-- Growth Chart --}}
+    <div class="card" style="margin:0;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+            <div style="font-weight:700;font-size:.95rem;">👥 User Growth</div>
+            <div style="display:flex;gap:8px;">
+                <select id="userGrowthPeriod" class="form-control" style="width:auto;padding:4px 8px;font-size:0.85rem;height:32px;" onchange="loadUserGrowth()">
+                    <option value="last30">Last 30 Days</option>
+                    <option value="year">This Year</option>
+                </select>
+            </div>
+        </div>
+        <div style="position:relative;height:200px;">
+            <canvas id="userGrowthChart"></canvas>
+        </div>
+    </div>
+    {{-- Stats Cards --}}
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card" style="margin:0;padding:16px 20px;display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="20" height="20" fill="none" stroke="#6366f1" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <div>
+                <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Total Users</div>
+                <div id="statTotalUsers" style="font-size:1.4rem;font-weight:800;color:#6366f1;margin-top:2px;">—</div>
+            </div>
+        </div>
+        <div class="card" style="margin:0;padding:16px 20px;display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(34,197,94,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="20" height="20" fill="none" stroke="#22c55e" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            </div>
+            <div>
+                <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">New This Month</div>
+                <div id="statNewMonth" style="font-size:1.4rem;font-weight:800;color:#22c55e;margin-top:2px;">—</div>
+            </div>
+        </div>
+        <div class="card" style="margin:0;padding:16px 20px;display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;border-radius:12px;background:rgba(0,198,255,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="20" height="20" fill="none" stroke="#00c6ff" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <div style="font-size:.72rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">New Today</div>
+                <div id="statNewToday" style="font-size:1.4rem;font-weight:800;color:#00c6ff;margin-top:2px;">—</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
     <div style="position: relative; width: 340px;">
         <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
@@ -102,8 +151,8 @@
                 <th data-tr="user_discord_info">User & Discord Info</th>
                 <th data-tr="role">Role</th>
                 <th data-tr="status">Status</th>
-                <th data-tr="network_isp">Network & ISP</th> 
-                <th data-tr="device_info">Device Info</th>   
+                <th data-tr="network_isp">Network & ISP</th>
+                <th data-tr="device_info">Device Info</th>
                 <th data-tr="location">Location</th>
                 <th data-tr="action">Action</th>
             </tr>
@@ -140,7 +189,7 @@
                                     {{ strtoupper($u->name) }}
                                 </a>
                                 <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">{{ $u->email }}</div>
-                                
+
                                 <div style="font-size: 0.75rem; color: #5865F2; font-family: monospace; margin-top: 4px; font-weight: 600;">
                                     Discord ID: {{ $u->discord_id ?? 'No data' }}
                                 </div>
@@ -373,7 +422,7 @@
     <div class="modal-content">
         <h3 style="margin-top:0; margin-bottom: 8px; color:var(--text-main); font-weight: 600; text-align: center;" data-tr="edit_user">Edit User</h3>
         <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom: 24px; text-align: center;"><span data-tr="user">User</span>: <span id="editUserName" style="color:var(--primary); font-weight:600;"></span></p>
-        
+
         <form id="editEmailForm" method="POST" action="">
             @csrf
             <div class="form-group">
@@ -387,7 +436,7 @@
                     <option value="admin">Admin</option>
                 </select>
             </div>
-            
+
             <div style="display:flex; gap:12px; margin-top: 24px;">
                 <button type="button" class="btn btn-secondary" style="flex:1; justify-content: center;" onclick="closeEditModal()"><span data-tr="cancel">Cancel</span></button>
                 <button type="submit" class="btn btn-primary" style="flex:1; justify-content: center;"><span data-tr="save">Save</span></button>
@@ -401,7 +450,7 @@
     <div class="modal-content" style="width: 980px; max-width: 96vw; max-height: 90vh; display: flex; flex-direction: column;">
         <h3 style="margin-top:0; margin-bottom: 8px; color:var(--text-main); font-weight: 600;">Transaction History</h3>
         <p style="color:var(--text-muted); font-size:0.875rem; margin-bottom: 24px;"><span data-tr="user">User</span>: <span id="historyUserName" style="color:var(--primary); font-weight:600;"></span></p>
-        
+
         <div style="overflow-y: auto; flex: 1;">
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
                 <thead style="background: var(--bg-surface); color: var(--text-muted);">
@@ -420,7 +469,7 @@
                 </tbody>
             </table>
         </div>
-        
+
         <div style="display:flex; justify-content: flex-end; margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 16px;">
             <button type="button" class="btn btn-secondary" onclick="closeHistoryModal()">Close</button>
         </div>
@@ -432,10 +481,10 @@
         document.getElementById('editUserName').innerText = userName.toUpperCase();
         document.getElementById('editEmailInput').value = currentEmail;
         document.getElementById('editRoleInput').value = currentRole;
-        
+
         let actionUrl = "{{ url('/admin/users/update') }}/" + userId;
-        document.getElementById('editEmailForm').action = actionUrl; 
-        
+        document.getElementById('editEmailForm').action = actionUrl;
+
         document.getElementById('editEmailModal').style.display = 'flex';
         document.body.classList.add('modal-open');
     }
@@ -450,7 +499,7 @@
         document.getElementById('historyModal').style.display = 'flex';
         document.body.classList.add('modal-open');
         document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Loading...</td></tr>';
-        
+
         fetch(`{{ url('/admin/users') }}/${userId}/history`)
             .then(res => res.json())
             .then(data => {
@@ -459,7 +508,7 @@
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-muted);">No transactions found.</td></tr>';
                     return;
                 }
-                
+
                 tbody.innerHTML = '';
                 data.forEach(trx => {
                     let statusBadge = '';
@@ -467,8 +516,8 @@
                     else if(trx.status === 'UNPAID') statusBadge = '<span class="badge badge-warning">PENDING</span>';
                     else statusBadge = '<span class="badge badge-danger">FAILED</span>';
 
-                    let priceFmt = trx.payment_method === 'STRIPE' 
-                        ? '$ ' + (trx.price / 100).toFixed(2) 
+                    let priceFmt = trx.payment_method === 'STRIPE'
+                        ? '$ ' + (trx.price / 100).toFixed(2)
                         : 'Rp ' + parseInt(trx.price).toLocaleString('id-ID');
 
                     let dateObj = new Date(trx.created_at);
@@ -483,7 +532,7 @@
                             else if (details.issuer) subInfo = `QRIS (${details.issuer.toUpperCase()})`;
                             else if (details.bank) subInfo = `Bank: ${details.bank.toUpperCase()}`;
                             else if (details.type) subInfo = details.type.toUpperCase();
-                            
+
                             if (subInfo) {
                                 payInfoStr += `<div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">${subInfo}</div>`;
                             }
@@ -517,5 +566,80 @@
         document.getElementById('historyModal').style.display = 'none';
         document.body.classList.remove('modal-open');
     }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let userGrowthChartInstance = null;
+
+async function loadUserGrowth() {
+    const period = document.getElementById('userGrowthPeriod').value;
+    try {
+        const res = await fetch(`{{ route('admin.users.growth') }}?period=${period}`);
+        const data = await res.json();
+
+        document.getElementById('statTotalUsers').textContent = data.total_users.toLocaleString();
+        document.getElementById('statNewMonth').textContent = data.new_this_month.toLocaleString();
+        document.getElementById('statNewToday').textContent = data.new_today.toLocaleString();
+
+        const ctx = document.getElementById('userGrowthChart').getContext('2d');
+        const isDark = localStorage.getItem('abuser_admin_theme') !== 'light';
+        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        const labelColor = isDark ? '#8892a4' : '#6b7280';
+
+        const grad = ctx.createLinearGradient(0, 0, 0, 200);
+        grad.addColorStop(0, 'rgba(99,102,241,0.35)');
+        grad.addColorStop(1, 'rgba(99,102,241,0.02)');
+
+        if (userGrowthChartInstance) {
+            userGrowthChartInstance.data.labels = data.labels;
+            userGrowthChartInstance.data.datasets[0].data = data.data;
+            userGrowthChartInstance.update();
+        } else {
+            userGrowthChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'New Users',
+                        data: data.data,
+                        borderColor: '#6366f1',
+                        backgroundColor: grad,
+                        borderWidth: 2.5,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        tension: 0.4,
+                        fill: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1b1e2b',
+                            borderColor: '#2a2d3e',
+                            borderWidth: 1,
+                            titleColor: '#fff',
+                            bodyColor: '#8892a4',
+                            padding: 10,
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: labelColor, maxTicksLimit: 8, font: { size: 11 } } },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: { color: labelColor, font: { size: 10 }, stepSize: 1, precision: 0 },
+                            beginAtZero: true,
+                        }
+                    }
+                }
+            });
+        }
+    } catch(e) { console.error('Failed to load user growth', e); }
+}
+
+document.addEventListener('DOMContentLoaded', loadUserGrowth);
 </script>
 @endsection

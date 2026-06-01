@@ -16,7 +16,7 @@ class CallbackController extends Controller
 
         try {
             $notif = new \Midtrans\Notification();
-            
+
             // 0. SIGNATURE VALIDATION (Mencegah Bypass Pembayaran)
             $serverKey = env('MIDTRANS_SERVER_KEY');
             $expectedSignature = hash('sha512', $notif->order_id . $notif->status_code . $notif->gross_amount . $serverKey);
@@ -61,26 +61,26 @@ class CallbackController extends Controller
 
                         // 2. MENCEGAH RACE CONDITION DI WEBHOOK DENGAN DB LOCKING
                         $issuedCodes = [];
-                        
+
                         \Illuminate\Support\Facades\DB::transaction(function() use ($trx, &$issuedCodes, $paymentDetails) {
                             $trx->update([
                                 'status' => 'PAID',
                                 'payment_details' => json_encode($paymentDetails)
                             ]);
-                            
+
                             if (empty($trx->vouchers_issued)) {
                                 $vouchers = \App\Models\VoucherCode::where('variant_id', $trx->variant_id)
                                                                    ->where('status', 'AVAILABLE')
                                                                    ->lockForUpdate() // Prevent Overselling
                                                                    ->take($trx->quantity)
                                                                    ->get();
-                                
+
                                 if ($vouchers->count() >= $trx->quantity) {
                                     foreach ($vouchers as $vc) {
                                         $vc->update(['status' => 'SOLD']);
                                         $issuedCodes[] = $vc->code;
                                     }
-                                    
+
                                     if (!empty($issuedCodes)) {
                                         $trx->update(['vouchers_issued' => implode(", ", $issuedCodes)]);
                                     }
@@ -90,7 +90,7 @@ class CallbackController extends Controller
                                 }
                             }
                         });
-                            
+
                             // Send Discord Notification
                             $user = \App\Models\User::where('email', $trx->customer_email)->first();
                             $orderData = [
@@ -110,7 +110,7 @@ class CallbackController extends Controller
                                 'discord_id'     => $user->discord_id ?? null,
                                 'vouchers'       => $issuedCodes,
                             ];
-                            
+
                             \App\Http\Controllers\PaymentController::sendDiscordNotification($orderData);
                         }
                 } else if ($transaction == 'pending') {
@@ -126,6 +126,103 @@ class CallbackController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error'], 500);
+        }
+
+        return response()->json(['message' => 'OK']);
+    }
+
+    public function handleCrypto(Request $request)
+    {
+        $ipnSecret = env('NOWPAYMENTS_IPN_SECRET');
+
+        // Verify IPN signature
+        if ($ipnSecret) {
+            $receivedSig = $request->header('x-nowpayments-sig');
+            $sortedPayload = $request->all();
+            ksort($sortedPayload, SORT_STRING);
+            $expectedSig = hash_hmac('sha512', json_encode($sortedPayload), $ipnSecret);
+
+            if ($receivedSig !== $expectedSig) {
+                \Log::critical('NOWPAYMENTS IPN SIGNATURE MISMATCH', ['received' => $receivedSig]);
+                return response()->json(['message' => 'Invalid signature'], 403);
+            }
+        }
+
+        $data          = $request->all();
+        $orderId       = $data['order_id'] ?? null;
+        $paymentStatus = $data['payment_status'] ?? '';
+
+        if (!$orderId) {
+            return response()->json(['message' => 'No order ID'], 400);
+        }
+
+        $trx = Transaction::where('reference', $orderId)->first();
+
+        if (!$trx) {
+            \Log::error('CRYPTO CALLBACK: Transaction not found', ['order_id' => $orderId]);
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        if (in_array($paymentStatus, ['finished', 'confirmed'])) {
+            if ($trx->status !== 'PAID') {
+                $issuedCodes = [];
+
+                \Illuminate\Support\Facades\DB::transaction(function () use ($trx, &$issuedCodes, $data) {
+                    $trx->update([
+                        'status'          => 'PAID',
+                        'payment_details' => json_encode([
+                            'type'          => 'crypto',
+                            'pay_currency'  => $data['pay_currency'] ?? 'unknown',
+                            'actually_paid' => $data['actually_paid'] ?? 0,
+                            'payment_id'    => $data['payment_id'] ?? null,
+                        ]),
+                    ]);
+
+                    if (empty($trx->vouchers_issued)) {
+                        $vouchers = \App\Models\VoucherCode::where('variant_id', $trx->variant_id)
+                            ->where('status', 'AVAILABLE')
+                            ->lockForUpdate()
+                            ->take($trx->quantity)
+                            ->get();
+
+                        if ($vouchers->count() >= $trx->quantity) {
+                            foreach ($vouchers as $vc) {
+                                $vc->update(['status' => 'SOLD']);
+                                $issuedCodes[] = $vc->code;
+                            }
+                            if (!empty($issuedCodes)) {
+                                $trx->update(['vouchers_issued' => implode(', ', $issuedCodes)]);
+                            }
+                        } else {
+                            \Log::critical('CRYPTO OVERSOLD PREVENTED: Order ' . $trx->reference);
+                            $trx->update(['status' => 'FAILED_OVERSOLD']);
+                        }
+                    }
+                });
+
+                $user = \App\Models\User::find($trx->user_id);
+                $orderData = [
+                    'order_id'       => $trx->reference,
+                    'product_name'   => $trx->product_name,
+                    'quantity'       => $trx->quantity,
+                    'unit_price'     => ($trx->original_price / max($trx->quantity, 1)) / 100,
+                    'discount'       => 0,
+                    'total'          => $trx->price / 100,
+                    'currency'       => 'USD',
+                    'payment_method' => 'Crypto',
+                    'customer_email' => $trx->customer_email,
+                    'promo_code'     => $trx->promo_code,
+                    'paid_at'        => now()->format('d M Y, H:i'),
+                    'discord_name'   => $user->name ?? null,
+                    'discord_id'     => $user->discord_id ?? null,
+                    'vouchers'       => $issuedCodes,
+                ];
+                \App\Http\Controllers\PaymentController::sendDiscordNotification($orderData);
+            }
+        } elseif (in_array($paymentStatus, ['failed', 'refunded'])) {
+            $trx->update(['status' => 'FAILED']);
+        } elseif ($paymentStatus === 'expired') {
+            $trx->update(['status' => 'EXPIRED']);
         }
 
         return response()->json(['message' => 'OK']);

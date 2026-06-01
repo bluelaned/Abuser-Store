@@ -22,6 +22,10 @@
                 </button>
             </form>
         @endif
+        <a href="{{ route('admin.transactions.export') }}{{ request()->getQueryString() ? '?' . request()->getQueryString() : '' }}" class="btn btn-secondary" style="white-space:nowrap;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+        </a>
     </div>
 </div>
 
@@ -101,7 +105,7 @@
                     <span style="display:inline-block;width:8px;height:8px;background:#00c6ff;border-radius:50%;margin-right:4px;"></span>USD (Stripe)
                 </div>
             </div>
-            
+
             {{-- Filter UI --}}
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
                 <select id="chartPeriod" class="form-control" style="width: auto; padding: 4px 8px; font-size: 0.85rem; height: 32px;" onchange="handlePeriodChange()">
@@ -189,6 +193,8 @@
                 <option value="STRIPE" {{ request('payment') === 'STRIPE' ? 'selected' : '' }}>Stripe</option>
                 <option value="QRIS" {{ request('payment') === 'QRIS' ? 'selected' : '' }}>QRIS</option>
                 <option value="MIDTRANS" {{ request('payment') === 'MIDTRANS' ? 'selected' : '' }}>Midtrans</option>
+                <option value="PAYPAL" {{ request('payment') === 'PAYPAL' ? 'selected' : '' }}>PayPal</option>
+                <option value="CRYPTO" {{ request('payment') === 'CRYPTO' ? 'selected' : '' }}>Crypto</option>
             </select>
         </div>
         {{-- Date From --}}
@@ -209,6 +215,28 @@
                 <option value="date_asc" {{ request('sort') === 'date_asc' ? 'selected' : '' }}>Date: Oldest First</option>
                 <option value="price_desc" {{ request('sort') === 'price_desc' ? 'selected' : '' }}>Price: High → Low</option>
                 <option value="price_asc" {{ request('sort') === 'price_asc' ? 'selected' : '' }}>Price: Low → High</option>
+            </select>
+        </div>
+        {{-- Price Min --}}
+        <div style="min-width: 120px;">
+            <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px;">Min Price</label>
+            <input type="number" name="price_min" value="{{ request('price_min') }}" placeholder="0" class="form-control" min="0">
+        </div>
+        {{-- Price Max --}}
+        <div style="min-width: 120px;">
+            <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px;">Max Price</label>
+            <input type="number" name="price_max" value="{{ request('price_max') }}" placeholder="∞" class="form-control" min="0">
+        </div>
+        {{-- User Tier --}}
+        <div style="min-width: 130px;">
+            <label style="font-size:0.72rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px;">User Tier</label>
+            <select name="tier" class="form-control">
+                <option value="">All Tiers</option>
+                <option value="bronze"   {{ request('tier')==='bronze'   ? 'selected' : '' }}>🥉 Bronze</option>
+                <option value="silver"   {{ request('tier')==='silver'   ? 'selected' : '' }}>🥈 Silver</option>
+                <option value="gold"     {{ request('tier')==='gold'     ? 'selected' : '' }}>🥇 Gold</option>
+                <option value="platinum" {{ request('tier')==='platinum' ? 'selected' : '' }}>💎 Platinum</option>
+                <option value="diamond"  {{ request('tier')==='diamond'  ? 'selected' : '' }}>💠 Diamond</option>
             </select>
         </div>
         {{-- Buttons --}}
@@ -279,7 +307,7 @@
                     @endif
                 </td>
                 <td style="font-weight:600;">
-                    @if(strtoupper($trx->payment_method) === 'STRIPE')
+                    @if(in_array(strtoupper($trx->payment_method), ['STRIPE', 'PAYPAL', 'CRYPTO']))
                         $ {{ number_format($trx->price / 100, 2) }}
                     @else
                         Rp {{ number_format($trx->price, 0, ',', '.') }}
@@ -338,7 +366,7 @@ function handlePeriodChange() {
         monthSelect.style.display = 'block';
         chartTitle.innerText = 'Revenue - Custom Month';
     }
-    
+
     updateChart();
 }
 

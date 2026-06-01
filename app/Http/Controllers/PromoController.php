@@ -38,13 +38,17 @@ class PromoController extends Controller
             'product_id' => $request->product_id
         ]);
 
+        \App\Models\AdminLog::record('created', 'promo', null, 'Created promo code: ' . strtoupper($request->code));
+
         return back()->with('success', 'Promo berhasil dibuat!');
     }
 
     // HAPUS PROMO
     public function destroy($id)
     {
-        Promo::findOrFail($id)->delete();
+        $promo = Promo::findOrFail($id);
+        \App\Models\AdminLog::record('deleted', 'promo', $id, 'Deleted promo code: ' . $promo->code);
+        $promo->delete();
         return back()->with('success', 'Promo dihapus.');
     }
 }

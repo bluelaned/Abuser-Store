@@ -1,0 +1,14 @@
+{
+  "name": "lastseen-bot",
+  "version": "1.0.0",
+  "description": "Discord Bot to track last seen status",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "agent-twitter-client": "^0.0.18",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.5"
+  }
+}

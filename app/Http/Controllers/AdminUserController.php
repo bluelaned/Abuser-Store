@@ -18,7 +18,7 @@ class AdminUserController extends Controller
         }
 
         $users = $query->paginate(10)->withQueryString();
-        
+
         return view('admin.users', compact('users'));
     }
 
@@ -82,12 +82,51 @@ class AdminUserController extends Controller
             'email' => $request->email,
             'role' => $request->role,
         ]);
+        \App\Models\AdminLog::record('updated', 'user', $user->id, "Updated user role/email: {$user->name} → role={$request->role}");
         return back()->with('success', "Data {$user->name} berhasil diperbarui!");
     }
 
     public function destroy($id)
     {
+        $user = User::find($id);
+        \App\Models\AdminLog::record('deleted', 'user', $id, 'Deleted user: ' . ($user->name ?? 'Unknown'));
         User::destroy($id);
         return back()->with('success', 'User dibasmi!');
+    }
+
+    public function growthData(Request $request)
+    {
+        $period = $request->input('period', 'last30');
+        $labels = [];
+        $data   = [];
+
+        if ($period === 'last30') {
+            for ($i = 29; $i >= 0; $i--) {
+                $date     = now()->subDays($i);
+                $labels[] = $date->format('d M');
+                $data[]   = \App\Models\User::whereDate('created_at', $date->format('Y-m-d'))->count();
+            }
+        } elseif ($period === 'year') {
+            for ($m = 1; $m <= 12; $m++) {
+                $labels[] = \Carbon\Carbon::create(now()->year, $m, 1)->format('M Y');
+                $data[]   = \App\Models\User::whereYear('created_at', now()->year)
+                    ->whereMonth('created_at', $m)
+                    ->count();
+            }
+        }
+
+        $totalUsers   = \App\Models\User::count();
+        $newThisMonth = \App\Models\User::whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
+            ->count();
+        $newToday     = \App\Models\User::whereDate('created_at', today())->count();
+
+        return response()->json([
+            'labels'         => $labels,
+            'data'           => $data,
+            'total_users'    => $totalUsers,
+            'new_this_month' => $newThisMonth,
+            'new_today'      => $newToday,
+        ]);
     }
 }

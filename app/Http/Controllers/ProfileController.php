@@ -12,11 +12,11 @@ class ProfileController extends Controller
     public function show($name, $id)
     {
         $user = User::findOrFail($id);
-        
+
         $paidTransactions = Transaction::where('user_id', $user->id)->where('status', 'PAID')->get();
         $purchases = $paidTransactions->count();
         $totalSpent = $paidTransactions->sum('price');
-        
+
         $usdSpent = 0;
         foreach($paidTransactions as $trx) {
             if (strtoupper($trx->payment_method) === 'STRIPE') {
@@ -61,9 +61,18 @@ class ProfileController extends Controller
             }
         }
 
-        $transactions = Transaction::where('user_id', $user->id)->orderBy('created_at', 'desc')->paginate(10);
-        
-        return view('profile.show', compact('user', 'purchases', 'totalSpent', 'transactions', 'tier', 'usdSpent', 'unlockedFrames', 'equippedFrame'));
+        // Allow owner/admin to filter transactions by status
+        $txQuery = Transaction::where('user_id', $user->id);
+        $txStatusFilter = null;
+        if (auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin')) {
+            if (request()->filled('tx_status')) {
+                $txStatusFilter = request('tx_status');
+                $txQuery->where('status', $txStatusFilter);
+            }
+        }
+        $transactions = $txQuery->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+
+        return view('profile.show', compact('user', 'purchases', 'totalSpent', 'transactions', 'tier', 'usdSpent', 'unlockedFrames', 'equippedFrame', 'txStatusFilter'));
     }
 
     public function updateBanner(Request $request, $name, $id)
@@ -170,12 +179,12 @@ class ProfileController extends Controller
                         mkdir(public_path('uploads/avatars'), 0755, true);
                     }
                     file_put_contents(public_path('uploads/avatars/') . $filename, $data);
-                    
+
                     // delete old avatar if it's local
                     if ($user->avatar && str_starts_with($user->avatar, '/uploads/avatars/') && file_exists(public_path($user->avatar))) {
                         @unlink(public_path($user->avatar));
                     }
-                    
+
                     $user->avatar = '/uploads/avatars/' . $filename;
                 }
             }

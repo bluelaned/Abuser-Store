@@ -9,19 +9,38 @@ use App\Models\Variant;
 
 class ProductController extends Controller
 {
-    public function create() { 
-        return view('admin.product_create'); 
+    public function create() {
+        return view('admin.product_create');
     }
 
-    public function index() {
-        $products = Product::with('variants')->latest()->get();
+    public function index(Request $request) {
+        $query = Product::with('variants')->latest();
+
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+
+        $products = $query->get();
+        $categories = Product::whereNotNull('category')->where('category', '!=', '')->distinct()->orderBy('category')->pluck('category');
         $reviews = \App\Models\Review::with('user')->where('is_published', true)->latest()->get();
-        return view('index', compact('products', 'reviews')); 
+        return view('index', compact('products', 'reviews', 'categories'));
     }
 
     public function adminDashboard() {
         $products = Product::with('variants')->latest()->get();
-        return view('admin.dashboard', compact('products'));
+
+        // Stock alert: internal products with variants having fewer than 5 available vouchers
+        $lowStockVariants = \App\Models\Variant::with('product')
+            ->whereHas('product', fn($q) => $q->where('type', 'internal'))
+            ->withCount(['vouchers as available_stock' => fn($q) => $q->where('status', 'AVAILABLE')])
+            ->having('available_stock', '<', 5)
+            ->orderBy('available_stock', 'asc')
+            ->get();
+
+        return view('admin.dashboard', compact('products', 'lowStockVariants'));
     }
 
     // --- SIMPAN PRODUK BARU ---
@@ -30,6 +49,11 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:internal,external',
+            'delivery_method' => 'required|in:serial,gift',
+            'official_price' => 'nullable|numeric|min:0',
+            'selling_price'  => 'nullable|numeric|min:0',
+            'profit_currency' => 'nullable|string|max:10',
+            'category' => 'nullable|string|max:100',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
             'slider_images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
             'durations' => 'required|array',
@@ -45,10 +69,15 @@ class ProductController extends Controller
         }
 
         $product = Product::create([
-            'name' => $request->name,
-            'type' => $request->type,
-            'description' => $request->description,
-            'image' => $imagePath ?? null,
+            'name'            => $request->name,
+            'type'            => $request->type,
+            'delivery_method' => $request->delivery_method,
+            'official_price'  => $request->official_price ?? null,
+            'selling_price'   => $request->selling_price  ?? null,
+            'profit_currency' => strtoupper($request->profit_currency ?? 'USD'),
+            'description'     => $request->description,
+            'category'        => $request->category ?? null,
+            'image'           => $imagePath ?? null,
         ]);
 
         foreach ($request->durations as $key => $duration) {
@@ -92,6 +121,11 @@ class ProductController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|in:internal,external',
+            'delivery_method' => 'required|in:serial,gift',
+            'official_price' => 'nullable|numeric|min:0',
+            'selling_price'  => 'nullable|numeric|min:0',
+            'profit_currency' => 'nullable|string|max:10',
+            'category' => 'nullable|string|max:100',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'slider_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'durations' => 'required|array',
@@ -103,13 +137,18 @@ class ProductController extends Controller
         ]);
 
         $product = Product::findOrFail($id);
-        $product->name = $request->name;
-        $product->type = $request->type;
-        $product->description = $request->description;
+        $product->name            = $request->name;
+        $product->type            = $request->type;
+        $product->delivery_method = $request->delivery_method;
+        $product->official_price  = $request->official_price ?? null;
+        $product->selling_price   = $request->selling_price  ?? null;
+        $product->profit_currency = strtoupper($request->profit_currency ?? 'USD');
+        $product->description     = $request->description;
+        $product->category        = $request->category ?? null;
 
         if ($request->hasFile('image')) {
-            if ($product->image) { 
-                Storage::disk('public')->delete($product->image); 
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
             }
             $product->image = $request->file('image')->store('products', 'public');
         }
@@ -152,7 +191,7 @@ class ProductController extends Controller
         if ($request->has('delete_sliders')) {
             // Cari gambar berdasarkan ID yang diceklis, khusus buat produk ini
             $imagesToDelete = $product->images()->whereIn('id', $request->delete_sliders)->get();
-            
+
             foreach ($imagesToDelete as $img) {
                 // Hapus file fisiknya dari folder storage
                 Storage::disk('public')->delete($img->image_path);
@@ -166,7 +205,7 @@ class ProductController extends Controller
             foreach ($request->file('slider_images') as $file) {
                 // Simpan fisik gambar ke folder public/storage/products/sliders
                 $path = $file->store('products/sliders', 'public');
-                
+
                 // Simpan nama path ke database product_images
                 $product->images()->create([
                     'image_path' => $path
@@ -183,19 +222,20 @@ class ProductController extends Controller
     {
         // Pakai Eager Loading variants
         $product = Product::with('variants')->findOrFail($id);
-        
-        session(['checkout_product_id' => $id]); 
-        session()->save(); 
+
+        session(['checkout_product_id' => $id]);
+        session()->save();
 
         return view('checkout', compact('product'));
     }
 
     public function destroy($id) {
         $product = Product::findOrFail($id);
-        if ($product->image) { 
-            Storage::disk('public')->delete($product->image); 
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
         }
         \Log::warning('ADMIN ACTION: Product Deleted by User ID: ' . auth()->id() . ' | Product Name: ' . $product->name);
+        \App\Models\AdminLog::record('deleted', 'product', $product->id, 'Deleted product: ' . $product->name);
         $product->delete();
         return redirect()->route('admin.dashboard')->with('success', 'Produk Dihapus');
     }

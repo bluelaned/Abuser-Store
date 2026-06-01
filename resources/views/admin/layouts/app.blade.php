@@ -143,7 +143,7 @@
         .sidebar.collapsed .nav-link { justify-content: center; padding: 10px; }
         .sidebar.collapsed .chevron { display: none; }
         .sidebar.collapsed .sub-nav { display: none; }
-        
+
         .nav-link:hover, .nav-link.active {
             background: var(--border-color);
             color: var(--primary);
@@ -270,7 +270,7 @@
         th { text-align: left; padding: 12px 16px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
         td { padding: 16px; border-bottom: 1px solid var(--border-color); font-size: 0.875rem; color: var(--text-main); vertical-align: middle; }
         tbody tr:last-child td { border-bottom: none; }
-        
+
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
         .badge-success { background: #d1fae5; color: #047857; }
         .badge-warning { background: #fef3c7; color: #b45309; }
@@ -283,10 +283,10 @@
         .form-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 6px; color: var(--text-main); }
         .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.875rem; color: var(--text-main); background: var(--bg-body); transition: border-color 0.2s; }
         .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
-        
+
         .alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; font-size: 0.875rem; display: flex; align-items: center; gap: 8px; }
         .alert-success { background: #d1fae5; color: #047857; border: 1px solid #a7f3d0; }
-        
+
         .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .header-actions h1 { font-size: 1.5rem; font-weight: 600; color: var(--text-main); }
 
@@ -306,7 +306,7 @@
             flex-wrap: nowrap;
             gap: 2px;
         }
-        
+
         /* --- HAMBURGER TOGGLE (all screens) --- */
         .sidebar-toggle-btn {
             background: none;
@@ -322,7 +322,7 @@
             transition: background 0.2s, color 0.2s;
         }
         .sidebar-toggle-btn:hover { background: var(--border-color); color: var(--primary); }
-        
+
         /* --- MOBILE RESPONSIVE --- */
         .sidebar-overlay {
             display: none;
@@ -416,7 +416,7 @@
                 <span class="brand-name" data-tr="admin_panel">Admin Panel</span>
             </div>
         </div>
-        
+
         <div class="user-panel">
             <div class="user-avatar">
                 {{ substr(Auth::user()->name ?? 'A', 0, 1) }}
@@ -426,7 +426,7 @@
                 <div class="user-role">Administrator</div>
             </div>
         </div>
-        
+
         <nav>
             <details {{ request()->routeIs('admin.dashboard') || request()->routeIs('admin.transactions.*') || request()->routeIs('products.create') ? 'open' : '' }}>
                 <summary class="nav-link">
@@ -473,6 +473,20 @@
                 </svg>
                 <span class="nav-text" data-tr="manage_announcements">Announcements</span>
             </a>
+
+            <a href="{{ route('admin.static_pages') }}" class="nav-link {{ request()->routeIs('admin.static_pages') ? 'active' : '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span class="nav-text">Static Pages</span>
+            </a>
+
+            <a href="{{ route('admin.activity_logs') }}" class="nav-link {{ request()->routeIs('admin.activity_logs') ? 'active' : '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                </svg>
+                <span class="nav-text">Activity Log</span>
+            </a>
         </nav>
 
         <form action="{{ route('logout') }}" method="POST">
@@ -485,7 +499,7 @@
             </button>
         </form>
     </div>
-    
+
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
     <div class="main-wrapper" id="mainWrapper">
@@ -648,7 +662,7 @@
         function updateLanguageUI() {
             const langIcon = document.getElementById('langIcon');
             const langText = document.getElementById('langText');
-            
+
             if (currentLang === 'id') {
                 langIcon.textContent = '🇮🇩';
                 langText.textContent = 'ID';
@@ -683,7 +697,7 @@
                     }
                 }
             });
-            
+
             // Custom event so other scripts can hook into language change
             document.dispatchEvent(new Event('languageChanged'));
         }
@@ -697,7 +711,7 @@
         // Init
         document.addEventListener('DOMContentLoaded', () => {
             updateThemeIcon();
-            
+
             // Save initial English text for all data-tr elements
             document.querySelectorAll('[data-tr]').forEach(el => {
                 if(!el.hasAttribute('data-en')) {

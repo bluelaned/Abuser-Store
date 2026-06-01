@@ -20,7 +20,7 @@
             --primary-dim: #6366f1;
             --accent: #10b981;
         }
-        
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
@@ -74,7 +74,7 @@
         .reviews-nav-btn:hover { color: #6366f1 !important; border-color: #6366f1 !important; }
         .brand { color: #fcfcfc !important; }
         #themeToggleBtn { color: #8b8b93 !important; }
-        
+
         .profile-banner-overlay {
             position: absolute;
             inset: 0;
@@ -90,7 +90,7 @@
             gap: 12px;
             z-index: 10;
         }
-        
+
         .btn {
             background: rgba(0, 0, 0, 0.4);
             color: var(--text-main);
@@ -196,7 +196,7 @@
             align-items: flex-start;
             transition: background-color 0.3s ease;
         }
-        
+
         .stat-item:hover {
             background-color: var(--bg-surface);
         }
@@ -263,7 +263,7 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         /* Banner Upload Modal */
         #bannerModal {
             display: none;
@@ -275,12 +275,12 @@
             -webkit-backdrop-filter: blur(8px);
             animation: modalFadeIn 0.3s ease;
         }
-        
+
         @keyframes modalFadeIn {
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
-        
+
         .modal-box {
             background: var(--bg-card);
             padding: 32px;
@@ -291,12 +291,12 @@
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
         }
         .form-group { margin-bottom: 24px; }
-        .form-control { 
-            width: 100%; padding: 12px; 
-            background: rgba(0,0,0,0.2); 
-            color: white; 
-            border: 1px solid var(--border-color); 
-            border-radius: 8px; 
+        .form-control {
+            width: 100%; padding: 12px;
+            background: rgba(0,0,0,0.2);
+            color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             outline: none;
             transition: border-color 0.2s;
         }
@@ -320,7 +320,7 @@
         nav .d-sm-none { display: none !important; }
         nav p.text-muted { display: none !important; }
         nav .d-none.d-sm-flex { display: flex !important; justify-content: flex-end; width: 100%; }
-        
+
         .pagination {
             display: flex;
             gap: 6px;
@@ -393,7 +393,7 @@
                 Reviews
             </a>
         </div>
-        
+
         <div style="display: flex; gap: 20px; align-items: center;">
             @auth
                 <!-- USER DROPDOWN -->
@@ -410,7 +410,7 @@
                         </div>
                         <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </div>
-                    
+
                     <div class="user-dropdown-menu">
                         <div class="dropdown-header">
                             <img src="{{ Auth::user()->avatar }}" alt="Avatar">
@@ -484,13 +484,13 @@
         <!-- Banner Section -->
         <div class="profile-banner" style="background-image: url('{{ $user->banner ? asset($user->banner) : asset('images/default-banner.png') }}'); background-color: #1e1e21;">
             <div class="profile-banner-overlay"></div>
-            
+
             <div class="banner-actions">
                 <a href="{{ url('/') }}" class="btn">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     Back to Store
                 </a>
-                
+
                 @if(auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin'))
                     @if($user->banner)
                         <form action="{{ route('profile.update_banner', ['name' => strtolower($user->name), 'id' => $user->id]) }}" method="POST" style="margin: 0;">
@@ -521,7 +521,7 @@
                 @endif
                 <!-- Circular Avatar -->
                 <img src="{{ $user->avatar ?? 'https://ui-avatars.com/api/?name='.$user->name.'&background=random' }}" alt="Avatar" class="profile-avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; position: relative; z-index: 1; border: 4px solid var(--bg-card); background: var(--bg-surface);">
-                
+
                 @if(auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin'))
                 <!-- Edit Overlay -->
                 <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); border-radius: 50%; z-index: 3; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
@@ -529,7 +529,7 @@
                 </div>
                 @endif
             </div>
-            
+
             <div class="profile-info">
                 <div style="display: flex; align-items: center; gap: 12px; position: relative; width: fit-content;">
                     <h1 class="profile-name" style="margin: 0; {{ $tier['id'] === 'diamond' ? 'color: #60a5fa; text-shadow: 0 0 15px rgba(96,165,250,0.5);' : '' }}">
@@ -588,78 +588,104 @@
             @endif
             <div class="tab-link {{ !(auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin')) ? 'active' : '' }}" onclick="showTab('about', this)">About</div>
         </div>
-        
+
         <div class="profile-content" id="tab-transactions" style="display: {{ (auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin')) ? 'flex' : 'none' }}">
             @if(auth()->check() && (auth()->id() === $user->id || auth()->user()->role === 'admin'))
-                @if($transactions->isEmpty())
-                    <div style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;">
-                        <svg width="48" height="48" fill="none" stroke="var(--border-color)" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom: 12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                        <p style="color: var(--text-muted); margin: 0;">No transactions yet.</p>
-                    </div>
-                @else
-                    <div style="width: 100%; overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
-                                    <th style="padding: 12px 16px;">Date</th>
-                                    <th style="padding: 12px 16px;">Invoice</th>
-                                    <th style="padding: 12px 16px;">Product</th>
-                                    <th style="padding: 12px 16px;">Serial / Key</th>
-                                    <th style="padding: 12px 16px;">Amount</th>
-                                    <th style="padding: 12px 16px;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($transactions as $trx)
-                                <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;" onmouseover="this.style.background='rgba(79,70,229,0.05)'" onmouseout="this.style.background='transparent'">
-                                    <td style="padding: 14px 16px; color: var(--text-muted); font-size: 0.875rem;">{{ $trx->created_at->format('M d, Y') }}</td>
-                                    <td style="padding: 14px 16px; color: var(--text-main); font-family: monospace; font-size: 0.85rem;">{{ $trx->reference }}</td>
-                                    <td style="padding: 14px 16px; color: var(--text-main); font-weight: 600;">
-                                        {{ $trx->product_name ?? 'Unknown Product' }}
-                                        @if(($trx->quantity ?? 1) > 1)
-                                            <span style="color: var(--text-muted); font-weight: 400; font-size: 0.8rem;"> ×{{ $trx->quantity }}</span>
-                                        @endif
-                                    </td>
-                                    <td style="padding: 14px 16px;">
-                                        @if($trx->status === 'PAID' && $trx->vouchers_issued)
-                                            <span
-                                                class="serial-key-blur"
-                                                onclick="this.classList.toggle('revealed')"
-                                                title="Click to reveal"
-                                                style="font-family: monospace; font-size: 0.82rem; background: rgba(16,185,129,0.08); color: #10b981; padding: 4px 10px; border-radius: 6px; cursor: pointer; display: inline-block; user-select: none; transition: filter 0.3s;"
-                                            >{{ $trx->vouchers_issued }}</span>
-                                        @else
-                                            <span style="color: var(--text-muted); font-size: 0.8rem;">—</span>
-                                        @endif
-                                    </td>
-                                    <td style="padding: 14px 16px; color: var(--accent); font-weight: 700;">
-                                        @if(strtoupper($trx->payment_method ?? '') === 'STRIPE')
-                                            $ {{ number_format($trx->price / 100, 2) }}
-                                        @else
-                                            Rp {{ number_format($trx->price, 0, ',', '.') }}
-                                        @endif
-                                    </td>
-                                    <td style="padding: 14px 16px;">
-                                        @if($trx->status === 'PAID')
-                                            <span style="background: rgba(16, 185, 129, 0.12); color: #10b981; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">PAID</span>
-                                        @elseif($trx->status === 'UNPAID')
-                                            <span style="background: rgba(234, 179, 8, 0.12); color: #eab308; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">PENDING</span>
-                                        @else
-                                            <span style="background: rgba(239, 68, 68, 0.12); color: #ef4444; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">{{ $trx->status }}</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                        
-                        @if($transactions->hasPages())
-                            <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                                {{ $transactions->links('pagination::bootstrap-5') }}
-                            </div>
+                <div style="width: 100%;">
+
+                    {{-- Status Filter --}}
+                    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;">
+                        @php
+                            $profileUrl = route('profile.show', ['name' => strtolower($user->name), 'id' => $user->id]);
+                        @endphp
+                        @foreach(['' => 'All', 'PAID' => '✅ Paid', 'UNPAID' => '⏳ Pending', 'FAILED' => '❌ Failed'] as $val => $label)
+                            <a href="{{ $profileUrl }}{{ $val ? '?tx_status='.$val : '' }}#transactions"
+                               style="padding: 4px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; text-decoration: none; border: 1px solid {{ ($txStatusFilter ?? '') === $val ? '#6366f1' : 'var(--border-color)' }}; color: {{ ($txStatusFilter ?? '') === $val ? '#6366f1' : 'var(--text-muted)' }}; background: {{ ($txStatusFilter ?? '') === $val ? 'rgba(99,102,241,0.12)' : 'transparent' }}; transition: 0.2s;">
+                                {{ $label }}
+                            </a>
+                        @endforeach
+                        @if(!empty($txStatusFilter))
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">{{ $transactions->total() }} result(s)</span>
                         @endif
                     </div>
-                @endif
+
+                    @if($transactions->isEmpty())
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;">
+                            <svg width="48" height="48" fill="none" stroke="var(--border-color)" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom: 12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            <p style="color: var(--text-muted); margin: 0;">No transactions{{ $txStatusFilter ? ' with status '.strtolower($txStatusFilter) : '' }} yet.</p>
+                        </div>
+                    @else
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <th style="padding: 12px 16px;">Date</th>
+                                        <th style="padding: 12px 16px;">Invoice</th>
+                                        <th style="padding: 12px 16px;">Product</th>
+                                        <th style="padding: 12px 16px;">Serial / Key</th>
+                                        <th style="padding: 12px 16px;">Amount</th>
+                                        <th style="padding: 12px 16px;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($transactions as $trx)
+                                    <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s;" onmouseover="this.style.background='rgba(79,70,229,0.05)'" onmouseout="this.style.background='transparent'">
+                                        <td style="padding: 14px 16px; color: var(--text-muted); font-size: 0.875rem; white-space: nowrap;">{{ $trx->created_at->format('M d, Y') }}</td>
+                                        <td style="padding: 14px 16px; color: var(--text-main); font-family: monospace; font-size: 0.82rem;">{{ $trx->reference }}</td>
+                                        <td style="padding: 14px 16px; color: var(--text-main); font-weight: 600;">
+                                            {{ $trx->product_name ?? 'Unknown Product' }}
+                                            @if(($trx->quantity ?? 1) > 1)
+                                                <span style="color: var(--text-muted); font-weight: 400; font-size: 0.8rem;"> ×{{ $trx->quantity }}</span>
+                                            @endif
+                                        </td>
+                                        <td style="padding: 14px 16px;">
+                                            @if($trx->status === 'PAID' && $trx->vouchers_issued)
+                                                <span
+                                                    class="serial-key-blur"
+                                                    onclick="this.classList.toggle('revealed'); copyToClipboard(this.textContent.trim())"
+                                                    title="Click to reveal & copy"
+                                                    style="font-family: monospace; font-size: 0.82rem; background: rgba(16,185,129,0.08); color: #10b981; padding: 4px 10px; border-radius: 6px; cursor: pointer; display: inline-block; user-select: none; transition: filter 0.3s;"
+                                                >{{ $trx->vouchers_issued }}</span>
+                                            @elseif($trx->status === 'UNPAID' && $trx->checkout_url)
+                                                <a href="{{ $trx->checkout_url }}" target="_blank"
+                                                   style="display: inline-flex; align-items: center; gap: 5px; background: rgba(234,179,8,0.12); color: #eab308; border: 1px solid rgba(234,179,8,0.3); padding: 4px 12px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; text-decoration: none; transition: 0.2s;"
+                                                   onmouseover="this.style.background='rgba(234,179,8,0.22)'" onmouseout="this.style.background='rgba(234,179,8,0.12)'">
+                                                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                                                    Continue Payment
+                                                </a>
+                                            @else
+                                                <span style="color: var(--text-muted); font-size: 0.8rem;">—</span>
+                                            @endif
+                                        </td>
+                                        <td style="padding: 14px 16px; color: var(--accent); font-weight: 700; white-space: nowrap;">
+                                            @if(in_array(strtoupper($trx->payment_method ?? ''), ['STRIPE', 'PAYPAL', 'CRYPTO']))
+                                                $ {{ number_format($trx->price / 100, 2) }}
+                                            @else
+                                                Rp {{ number_format($trx->price, 0, ',', '.') }}
+                                            @endif
+                                        </td>
+                                        <td style="padding: 14px 16px;">
+                                            @if($trx->status === 'PAID')
+                                                <span style="background: rgba(16,185,129,0.12); color: #10b981; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">PAID</span>
+                                            @elseif($trx->status === 'UNPAID')
+                                                <span style="background: rgba(234,179,8,0.12); color: #eab308; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">PENDING</span>
+                                            @else
+                                                <span style="background: rgba(239,68,68,0.12); color: #ef4444; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">{{ $trx->status }}</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+
+                            @if($transactions->hasPages())
+                                <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                                    {{ $transactions->links('pagination::bootstrap-5') }}
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                </div>
             @endif
         </div>
 
@@ -869,24 +895,24 @@
 <div id="avatarModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(8px);">
     <div style="background: var(--bg-card); padding: 32px; border-radius: 16px; border: 1px solid var(--border-color); width: 800px; max-width: 95%; position: relative;">
         <h2 style="margin-top: 0; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">Edit Profile Picture & Frame</h2>
-        
+
         <div style="display: flex; gap: 40px; flex-wrap: wrap;">
             <!-- Left Side: Cropper -->
             <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; align-items: center;">
                 <h3 style="margin-top: 0; color: var(--text-muted); font-size: 0.9rem;">Profile Picture</h3>
                 <div id="croppie-container" style="width: 250px; min-height: 290px; margin-bottom: 8px; position: relative;"></div>
-                
+
                 <div style="display: flex; gap: 8px; margin-bottom: 16px;">
                     <button class="btn" style="padding: 6px 14px; font-size: 1rem; font-weight: bold;" onclick="rotateAvatar(-90)" title="Rotate Left">↺</button>
                     <button class="btn" style="padding: 6px 14px; font-size: 1rem; font-weight: bold;" onclick="rotateAvatar(90)" title="Rotate Right">↻</button>
                     <button class="btn" style="padding: 6px 14px; font-size: 1rem; font-weight: bold;" onclick="flipAvatar('h')" title="Flip Horizontal">↔</button>
                     <button class="btn" style="padding: 6px 14px; font-size: 1rem; font-weight: bold;" onclick="flipAvatar('v')" title="Flip Vertical">↕</button>
                 </div>
-                
+
                 <input type="file" id="upload-avatar" accept="image/*" style="display: none;">
                 <button class="btn" onclick="document.getElementById('upload-avatar').click()" style="margin-bottom: 16px;">Choose Image</button>
             </div>
-            
+
             <!-- Right Side: Frames -->
             <div style="flex: 1; min-width: 300px; border-left: 1px solid var(--border-color); padding-left: 40px;">
                 <h3 style="margin-top: 0; color: var(--text-muted); font-size: 0.9rem;">Unlocked Frames</h3>
@@ -907,7 +933,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Actions -->
         <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; border-top: 1px solid var(--border-color); padding-top: 24px;">
             <button class="btn" onclick="closeAvatarModal()">Cancel</button>
@@ -954,14 +980,27 @@
         // Set correct default visible tab on load
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.profile-content').forEach(c => c.style.display = 'none');
+            // If arriving from a tx_status filter or #transactions hash, open transactions tab
+            const hasTxFilter = new URLSearchParams(window.location.search).has('tx_status');
+            const hasHash = window.location.hash === '#transactions';
             if (isOwnerOrAdmin) {
                 const trxTab = document.getElementById('tab-transactions');
                 if (trxTab) trxTab.style.display = 'flex';
+                if (hasTxFilter || hasHash) {
+                    document.querySelectorAll('.tab-link').forEach(t => t.classList.remove('active'));
+                    document.querySelector('.tab-link[onclick*="transactions"]')?.classList.add('active');
+                }
             } else {
                 const aboutTab = document.getElementById('tab-about');
                 if (aboutTab) aboutTab.style.display = 'flex';
             }
         });
+
+        // Copy to clipboard helper (for voucher codes)
+        function copyToClipboard(text) {
+            if (!text || text.length < 3) return; // Skip if still blurred/empty
+            navigator.clipboard?.writeText(text).catch(() => {});
+        }
 
         // === ABOUT EDIT TOGGLE ===
         function toggleAboutEdit(show) {
@@ -1050,7 +1089,7 @@
 
         function openAvatarModal() {
             document.getElementById('avatarModal').style.display = 'flex';
-            
+
             setTimeout(() => {
                 if (!croppieInstance) {
                     croppieInstance = new Croppie(document.getElementById('croppie-container'), {
